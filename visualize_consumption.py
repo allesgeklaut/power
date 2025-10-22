@@ -67,7 +67,7 @@ print(f"Gesamter Stromverbrauch insgesamt: {total_consumption_all:.2f} kWh")
 # --- Kostenberechnung mit Marktpreisen ---
 # Lade Preisdaten
 price_df = pd.read_csv(
-    "EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-12T16_03_21Z.csv",
+    "EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-22T20_37_02Z.csv",
     sep=';',
     decimal=','
 )
