@@ -1,7 +1,7 @@
 """
 PowerCostCalculator module.
 
-Calculates electricity costs based on consumption and market price data by merging on timestamps, 
+Calculates electricity costs based on consumption and market price data by merging on timestamps,
 applying market and provider fees, and summarizing monthly costs.
 
 Data sources:
@@ -11,6 +11,7 @@ Data sources:
 
 import pandas as pd
 import matplotlib.pyplot as plt
+
 
 class PowerCostCalculator:
     """
@@ -58,7 +59,7 @@ class PowerCostCalculator:
         self.timestamp_col = timestamp_col
         self.fixed_fee = fixed_fee
         self.variable_fee_per_kwh = variable_fee_per_kwh
-        self.merged_df = None
+        self.merged_df: pd.DataFrame = pd.DataFrame()
 
     def merge_data(self):
         """
@@ -70,8 +71,10 @@ class PowerCostCalculator:
         -------
         None
         """
-        self.consumption_df[self.timestamp_col] = pd.to_datetime(self.consumption_df[self.timestamp_col])
-        self.price_df[self.timestamp_col] = pd.to_datetime(self.price_df[self.timestamp_col])
+        self.consumption_df[self.timestamp_col] = pd.to_datetime(
+            self.consumption_df[self.timestamp_col])
+        self.price_df[self.timestamp_col] = pd.to_datetime(
+            self.price_df[self.timestamp_col])
         self.merged_df = pd.merge(
             self.consumption_df,
             self.price_df[[self.timestamp_col, self.price_col]],
@@ -88,10 +91,11 @@ class PowerCostCalculator:
         pd.DataFrame
             Merged dataframe with columns: market_cost, variable_fee, total_cost.
         """
-        if self.merged_df is None:
+        if self.merged_df.empty:
             self.merge_data()
         df = self.merged_df
-        df['market_cost'] = df[self.consumption_col] * (df[self.price_col] / 1000)
+        df['market_cost'] = df[self.consumption_col] * \
+            (df[self.price_col] / 1000)
         df['variable_fee'] = df[self.consumption_col] * self.variable_fee_per_kwh
         df['total_cost'] = df['market_cost'] + df['variable_fee']
         return df
@@ -116,9 +120,12 @@ class PowerCostCalculator:
         Print monthly electricity costs (EUR) including provider fees.
         """
         monthly_cost = self.monthly_total()
+        monthly_avg_price = monthly_cost / \
+            self.merged_df.groupby('month')[self.consumption_col].sum()
         print('Monatliche Stromkosten inkl. Gebühren:')
         for month, cost in monthly_cost.items():
-            print(f'{month}: {cost:.2f} EUR')
+            print(f'{month}: {cost:.2f} EUR | average cost: {
+                  monthly_avg_price[month]:.3f} c/kWh')
 
     def plot_monthly_costs(self):
         """
@@ -136,7 +143,8 @@ class PowerCostCalculator:
         monthly_fixed = pd.Series([self.fixed_fee]*len(months), index=months)
         plt.figure(figsize=(10, 6))
         plt.bar(months, monthly_market, label='Marktpreis', color='skyblue')
-        plt.bar(months, monthly_variable, bottom=monthly_market, label='Variabler Anbieterpreis', color='orange')
+        plt.bar(months, monthly_variable, bottom=monthly_market,
+                label='Variabler Anbieterpreis', color='orange')
         plt.bar(
             months,
             monthly_fixed,
@@ -150,6 +158,7 @@ class PowerCostCalculator:
         plt.tight_layout()
         monthly_costs = self.monthly_total()
         for i, v in enumerate(monthly_costs.values):
-            plt.text(i, v + max(monthly_costs.values) * 0.02 + 0.5, f"{v:.2f} EUR", ha="center", fontweight="bold")
+            plt.text(i, v + max(monthly_costs.values) * 0.02 + 0.5,
+                     f"{v:.2f} EUR", ha="center", fontweight="bold")
         plt.ylim(0, max(monthly_costs.values) * 1.15)
         plt.tight_layout()
