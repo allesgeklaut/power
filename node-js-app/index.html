@@ -14,21 +14,67 @@
 
     <!-- File Upload Section -->
     <section class="upload-section">
+        <!-- Data Sources Section -->
+        <div class="data-sources-section" style="background-color: #ecf0f1; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; font-size: 16px; color: #2c3e50;">📊 Data Sources</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="source-link-box" style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #3498db;">
+                    <div style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">Consumption Data</div>
+                    <a href="https://mein.oekostrom.at/a-p/" target="_blank" style="color: #3498db; text-decoration: none; font-size: 14px;">
+                        🔗 mein.oekostrom.at/a-p
+                    </a>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">Download your consumption file here</div>
+                </div>
+                <div class="source-link-box" style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #e67e22;">
+                    <div style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">Price Data</div>
+                    <a href="https://markt.apg.at/transparenz/uebertragung/day-ahead-preise/" target="_blank" style="color: #e67e22; text-decoration: none; font-size: 14px;">
+                        🔗 markt.apg.at Day-Ahead Prices
+                    </a>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">Download Day-Ahead price data here</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload with Drag & Drop -->
         <div class="upload-container">
             <div class="upload-group">
-                <label class="upload-label">Consumption File (Excel/CSV)</label>
-                <input type="file" id="consumptionFile" accept=".xlsx,.xls,.csv" class="file-input">
-                <div class="filename-display" id="consumptionFilename">No file selected</div>
+                <label class="upload-label">📁 Consumption File (Excel/CSV)</label>
+                <div id="consumption-drop-zone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <span class="drop-zone-icon">📤</span>
+                        <span class="drop-zone-text">Drag &amp; drop file here or click to browse</span>
+                        <input type="file" id="consumptionFile" accept=".xlsx,.xls,.csv" style="display: none;">
+                    </div>
+                    <div id="consumption-filename" class="filename-display"></div>
+                </div>
             </div>
             <div class="upload-group">
-                <label class="upload-label">Price File (CSV)</label>
-                <input type="file" id="priceFile" accept=".csv" class="file-input">
-                <div class="filename-display" id="priceFilename">No file selected</div>
+                <label class="upload-label">📈 Price File (CSV)</label>
+                <div id="price-drop-zone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <span class="drop-zone-icon">📤</span>
+                        <span class="drop-zone-text">Drag &amp; drop file here or click to browse</span>
+                        <input type="file" id="priceFile" accept=".csv" style="display: none;">
+                    </div>
+                    <div id="price-filename" class="filename-display"></div>
+                </div>
             </div>
         </div>
         <div class="sample-data-container">
             <button id="loadSampleBtn" class="btn btn-sample">📦 Load Sample Data</button>
             <button id="clearSavedBtn" class="btn btn-danger">🗑️ Clear Saved Files</button>
+        </div>
+
+        <!-- Downloads Folder Monitoring Section -->
+        <div class="downloads-monitor-section" style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #ffc107;">
+            <h3 style="margin-top: 0; font-size: 16px; color: #856404;">⚡ Quick Upload (Chrome/Edge Only)</h3>
+            <p style="margin: 10px 0; font-size: 14px; color: #856404;">
+                Grant access to your Downloads folder to automatically detect and load newly downloaded files.
+            </p>
+            <button id="enable-downloads-monitor" class="btn btn-warning" style="background-color: #ffc107; color: #000;">
+                📁 Enable Downloads Folder Monitoring
+            </button>
+            <div id="downloads-monitor-status" style="margin-top: 10px; font-size: 13px; color: #856404; display: none;"></div>
         </div>
     </section>
 
