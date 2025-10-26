@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Consumption Analysis Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="app-header">
+        <h1>⚡ Power Consumption Analysis Tool</h1>
+    </header>
+
+    <!-- File Upload Section -->
+    <section class="upload-section">
+        <div class="upload-container">
+            <div class="upload-group">
+                <label class="upload-label">Consumption File (Excel/CSV)</label>
+                <input type="file" id="consumptionFile" accept=".xlsx,.xls,.csv" class="file-input">
+                <div class="filename-display" id="consumptionFilename">No file selected</div>
+            </div>
+            <div class="upload-group">
+                <label class="upload-label">Price File (CSV)</label>
+                <input type="file" id="priceFile" accept=".csv" class="file-input">
+                <div class="filename-display" id="priceFilename">No file selected</div>
+            </div>
+        </div>
+        <div class="sample-data-container">
+            <button id="loadSampleBtn" class="btn btn-sample">📦 Load Sample Data</button>
+        </div>
+    </section>
+
+    <!-- Date Range Controls Section -->
+    <section class="controls-section">
+        <div class="controls-container">
+            <div class="controls-header">
+                <h2>Date Range Selection</h2>
+                <span class="controls-note">(affects Consumption Profile only)</span>
+            </div>
+            <div class="date-controls">
+                <div class="date-input-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" class="date-input">
+                </div>
+                <div class="date-input-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" class="date-input">
+                </div>
+            </div>
+            <div class="quick-actions">
+                <button id="startOfMonthBtn" class="btn btn-quick btn-purple">📅 Start of Month</button>
+                <button id="fullRangeBtn" class="btn btn-quick btn-teal">📊 Full Range</button>
+            </div>
+            <button id="updateBtn" class="btn btn-update">🔄 Update Analysis</button>
+            <div id="statusIndicator" class="status-indicator">Ready</div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Chart 1: Consumption Profile -->
+        <section class="chart-section">
+            <h2>Consumption Profile: Selected Period vs Overall</h2>
+            <div class="chart-container">
+                <canvas id="consumptionChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Chart 2: Monthly Cost Breakdown -->
+        <section class="chart-section">
+            <h2>Monthly Cost Breakdown &amp; Consumption (All Available Data)</h2>
+            <div class="chart-container">
+                <canvas id="monthlyCostChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Statistics Panel -->
+        <section class="stats-section">
+            <h2>📊 Statistics Summary (Selected Period for Consumption Profile)</h2>
+            <div class="stats-grid">
+                <div class="stat-row">
+                    <span class="stat-label">Total Consumption:</span>
+                    <span class="stat-value" id="statTotalConsumption">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Total Cost:</span>
+                    <span class="stat-value" id="statTotalCost">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Average Monthly Consumption:</span>
+                    <span class="stat-value" id="statAvgMonthlyConsumption">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Average Monthly Cost:</span>
+                    <span class="stat-value" id="statAvgMonthlyCost">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Average Price (Overall):</span>
+                    <span class="stat-value" id="statAvgPrice">-</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse"></script>
+    <script src="app.js"></script>
+</body>
+</html>
