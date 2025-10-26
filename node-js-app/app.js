@@ -831,6 +831,18 @@ async function loadSavedFiles() {
         type: priceBlob.type
       });
       
+      // Update drop zones with file names
+      displayFileName(
+        document.getElementById('consumption-filename'),
+        document.getElementById('consumption-drop-zone'),
+        result.consumption.filename
+      );
+      displayFileName(
+        document.getElementById('price-filename'),
+        document.getElementById('price-drop-zone'),
+        result.price.filename
+      );
+      
       // Process the files
       handleConsumptionFile(consumptionFile);
       handlePriceFile(priceFile);
@@ -904,9 +916,19 @@ async function clearSavedFiles() {
       document.getElementById('consumptionFile').value = '';
       document.getElementById('priceFile').value = '';
       
-      // Clear filename displays
-      document.getElementById('consumptionFilename').textContent = 'No file selected';
-      document.getElementById('priceFilename').textContent = 'No file selected';
+      // Clear filename displays and drop zones
+      const consumptionFilename = document.getElementById('consumption-filename');
+      const priceFilename = document.getElementById('price-filename');
+      const consumptionDropZone = document.getElementById('consumption-drop-zone');
+      const priceDropZone = document.getElementById('price-drop-zone');
+      
+      consumptionFilename.textContent = '';
+      consumptionFilename.classList.remove('visible');
+      consumptionDropZone.classList.remove('has-file');
+      
+      priceFilename.textContent = '';
+      priceFilename.classList.remove('visible');
+      priceDropZone.classList.remove('has-file');
       
       // Clear date inputs
       document.getElementById('startDate').value = '';
@@ -936,6 +958,205 @@ async function clearSavedFiles() {
   } catch (error) {
     console.error('Error clearing files:', error);
     setStatus('⚠️ Could not clear files from server (server may not be available)', 'warning');
+  }
+}
+
+// Drag & Drop Functions
+function setupDropZone(dropZoneId, fileInputId, filenameDisplayId) {
+  const dropZone = document.getElementById(dropZoneId);
+  const fileInput = document.getElementById(fileInputId);
+  const filenameDisplay = document.getElementById(filenameDisplayId);
+  
+  // Click to open file picker
+  dropZone.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  // File input change
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      const file = e.target.files[0];
+      displayFileName(filenameDisplay, dropZone, file.name);
+    }
+  });
+  
+  // Prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  // Highlight drop zone when dragging over
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.add('drag-over');
+    }, false);
+  });
+  
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.remove('drag-over');
+    }, false);
+  });
+  
+  // Handle dropped files
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+      const file = files[0];
+      // Set the file to the input
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      fileInput.files = dataTransfer.files;
+      
+      // Display filename
+      displayFileName(filenameDisplay, dropZone, file.name);
+      
+      // Trigger change event
+      fileInput.dispatchEvent(new Event('change'));
+    }
+  }, false);
+}
+
+function displayFileName(filenameDisplay, dropZone, filename) {
+  filenameDisplay.textContent = `✓ ${filename}`;
+  filenameDisplay.classList.add('visible');
+  dropZone.classList.add('has-file');
+}
+
+// File System Access API Functions
+let downloadsDirectoryHandle = null;
+let monitoringInterval = null;
+let lastCheckedFiles = new Set();
+
+// Check if File System Access API is supported
+function isFileSystemAccessSupported() {
+  return 'showDirectoryPicker' in window;
+}
+
+// Enable downloads folder monitoring
+async function enableDownloadsMonitor() {
+  if (!isFileSystemAccessSupported()) {
+    setStatus('❌ File System Access API not supported in this browser. Use Chrome or Edge.', 'error');
+    return;
+  }
+  
+  try {
+    // Request access to Downloads folder
+    downloadsDirectoryHandle = await window.showDirectoryPicker({
+      mode: 'read',
+      startIn: 'downloads'
+    });
+    
+    const statusEl = document.getElementById('downloads-monitor-status');
+    statusEl.textContent = '✅ Monitoring Downloads folder for new files...';
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#27ae60';
+    
+    // Initialize file list
+    await updateFileList();
+    
+    // Start monitoring (check every 2 seconds)
+    monitoringInterval = setInterval(checkForNewFiles, 2000);
+    
+    setStatus('✅ Downloads folder monitoring enabled', 'success');
+  } catch (error) {
+    console.error('Error accessing Downloads folder:', error);
+    setStatus('❌ Could not access Downloads folder: ' + error.message, 'error');
+  }
+}
+
+// Update list of known files
+async function updateFileList() {
+  lastCheckedFiles.clear();
+  
+  for await (const entry of downloadsDirectoryHandle.values()) {
+    if (entry.kind === 'file') {
+      lastCheckedFiles.add(entry.name);
+    }
+  }
+}
+
+// Check for new files in Downloads folder
+async function checkForNewFiles() {
+  if (!downloadsDirectoryHandle) return;
+  
+  try {
+    const currentFiles = new Set();
+    
+    for await (const entry of downloadsDirectoryHandle.values()) {
+      if (entry.kind === 'file') {
+        currentFiles.add(entry.name);
+        
+        // Check if this is a new file
+        if (!lastCheckedFiles.has(entry.name)) {
+          await handleNewDownloadedFile(entry);
+        }
+      }
+    }
+    
+    lastCheckedFiles = currentFiles;
+  } catch (error) {
+    console.error('Error checking for new files:', error);
+  }
+}
+
+// Handle newly downloaded file
+async function handleNewDownloadedFile(fileHandle) {
+  const fileName = fileHandle.name.toLowerCase();
+  
+  console.log('New file detected:', fileHandle.name);
+  
+  // Check if it's a consumption file (Excel or CSV with "verbrauch" or "consumption")
+  const isConsumptionFile = fileName.includes('verbrauch') || 
+                           fileName.includes('consumption') ||
+                           fileName.includes('anlage');
+  
+  // Check if it's a price file (CSV with "preis" or "price" or "exaa" or "apg")
+  const isPriceFile = fileName.includes('preis') || 
+                     fileName.includes('price') ||
+                     fileName.includes('exaa') ||
+                     fileName.includes('day-ahead');
+  
+  if (isConsumptionFile || isPriceFile) {
+    try {
+      const file = await fileHandle.getFile();
+      
+      // Show notification
+      const fileType = isConsumptionFile ? 'consumption' : 'price';
+      setStatus(`📥 Auto-detected ${fileType} file: ${file.name}`, 'success');
+      
+      // Load the file
+      if (isConsumptionFile) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('consumptionFile').files = dataTransfer.files;
+        displayFileName(
+          document.getElementById('consumption-filename'),
+          document.getElementById('consumption-drop-zone'),
+          file.name
+        );
+        handleConsumptionFile(file);
+      } else if (isPriceFile) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('priceFile').files = dataTransfer.files;
+        displayFileName(
+          document.getElementById('price-filename'),
+          document.getElementById('price-drop-zone'),
+          file.name
+        );
+        handlePriceFile(file);
+      }
+    } catch (error) {
+      console.error('Error loading downloaded file:', error);
+    }
   }
 }
 
@@ -973,7 +1194,11 @@ function handleConsumptionFile(file) {
       }));
       
       state.consumptionData = processConsumptionData(processedData);
-      document.getElementById('consumptionFilename').textContent = filename;
+      displayFileName(
+        document.getElementById('consumption-filename'),
+        document.getElementById('consumption-drop-zone'),
+        filename
+      );
       
       // Save to server (non-blocking)
       saveFileToServer(file, 'consumption').then(saved => {
@@ -1019,7 +1244,11 @@ function handlePriceFile(file) {
       }));
       
       state.priceData = processPriceData(processedData);
-      document.getElementById('priceFilename').textContent = filename;
+      displayFileName(
+        document.getElementById('price-filename'),
+        document.getElementById('price-drop-zone'),
+        filename
+      );
       
       // Save to server (non-blocking)
       saveFileToServer(file, 'price').then(saved => {
@@ -1135,8 +1364,16 @@ function loadSampleData() {
   state.priceData = processPriceData(SAMPLE_PRICE);
   
   // Update filenames
-  document.getElementById('consumptionFilename').textContent = 'sample_consumption.csv';
-  document.getElementById('priceFilename').textContent = 'sample_price.csv';
+  displayFileName(
+    document.getElementById('consumption-filename'),
+    document.getElementById('consumption-drop-zone'),
+    'sample_consumption.csv'
+  );
+  displayFileName(
+    document.getElementById('price-filename'),
+    document.getElementById('price-drop-zone'),
+    'sample_price.csv'
+  );
   
   // Merge and update
   tryMergeAndUpdate();
@@ -1146,6 +1383,10 @@ function loadSampleData() {
 document.addEventListener('DOMContentLoaded', function() {
   // Try to load saved files from server
   loadSavedFiles();
+  
+  // Setup drag & drop zones
+  setupDropZone('consumption-drop-zone', 'consumptionFile', 'consumption-filename');
+  setupDropZone('price-drop-zone', 'priceFile', 'price-filename');
   
   // File upload listeners
   document.getElementById('consumptionFile').addEventListener('change', function(e) {
@@ -1159,6 +1400,17 @@ document.addEventListener('DOMContentLoaded', function() {
       handlePriceFile(e.target.files[0]);
     }
   });
+  
+  // Downloads monitoring button
+  const enableBtn = document.getElementById('enable-downloads-monitor');
+  if (enableBtn) {
+    // Hide the feature if not supported
+    if (!isFileSystemAccessSupported()) {
+      document.querySelector('.downloads-monitor-section').style.display = 'none';
+    }
+    
+    enableBtn.addEventListener('click', enableDownloadsMonitor);
+  }
   
   // Sample data button
   document.getElementById('loadSampleBtn').addEventListener('click', loadSampleData);
@@ -1214,4 +1466,11 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize status
   setStatus('Ready - Please upload files or load sample data', 'ready');
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval);
+  }
 });
