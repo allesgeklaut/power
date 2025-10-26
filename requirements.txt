@@ -16,3 +16,5 @@ six==1.17.0
 tzdata==2025.2
 tkcalendar>=1.6.0
 black
+streamlit
+plotly
