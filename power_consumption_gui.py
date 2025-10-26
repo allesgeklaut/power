@@ -3,6 +3,7 @@ Power Consumption Analysis GUI Application
 
 This GUI application provides interactive visualization and analysis of power 
 consumption data with the following features:
+- File picker for selecting consumption and price data files
 - Date range selection for filtering data
 - Consumption profile comparison (selected period vs overall)
 - Monthly cost breakdown with fees separation
@@ -20,7 +21,7 @@ Usage:
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from tkcalendar import DateEntry
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -29,12 +30,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from cost_calculator import PowerCostCalculator
+import os
 
 
 class PowerConsumptionGUI:
     """Main GUI application for power consumption analysis."""
 
-    def __init__(self, root, consumption_file, price_file):
+    def __init__(self, root, consumption_file=None, price_file=None):
         """
         Initialize the GUI application.
 
@@ -42,14 +44,14 @@ class PowerConsumptionGUI:
         ----------
         root : tk.Tk
             Main tkinter window
-        consumption_file : str
+        consumption_file : str, optional
             Path to consumption data Excel file
-        price_file : str
+        price_file : str, optional
             Path to price data CSV file
         """
         self.root = root
         self.root.title("Power Consumption Analysis Tool")
-        self.root.geometry("1400x900")
+        self.root.geometry("1400x950")
 
         # File paths
         self.consumption_file = consumption_file
@@ -59,19 +61,71 @@ class PowerConsumptionGUI:
         self.df_consumption_full = None
         self.df_price_full = None
         self.cost_calculator = None
-
-        # Load data
-        self.load_data()
+        self.min_date = None
+        self.max_date = None
 
         # Create GUI components
         self.create_widgets()
 
-        # Initial plot
-        self.update_analysis()
+        # Load data if files provided
+        if consumption_file and price_file:
+            self.load_data()
+            self.update_analysis()
+
+    def browse_consumption_file(self):
+        """Open file dialog to select consumption file."""
+        filename = filedialog.askopenfilename(
+            title="Select Consumption Data File",
+            filetypes=[
+                ("Excel files", "*.xlsx *.xls"),
+                ("All files", "*.*")
+            ]
+        )
+        if filename:
+            self.consumption_file = filename
+            self.consumption_file_label.config(text=os.path.basename(filename))
+            self.check_and_load_data()
+
+    def browse_price_file(self):
+        """Open file dialog to select price file."""
+        filename = filedialog.askopenfilename(
+            title="Select Price Data File",
+            filetypes=[
+                ("CSV files", "*.csv"),
+                ("All files", "*.*")
+            ]
+        )
+        if filename:
+            self.price_file = filename
+            self.price_file_label.config(text=os.path.basename(filename))
+            self.check_and_load_data()
+
+    def check_and_load_data(self):
+        """Check if both files are selected and load data."""
+        if self.consumption_file and self.price_file:
+            self.load_data()
+            if self.df_consumption_full is not None:
+                self.enable_analysis_controls()
+                self.update_analysis()
+
+    def enable_analysis_controls(self):
+        """Enable date selection and update button after data is loaded."""
+        self.start_date_entry.config(state='normal')
+        self.end_date_entry.config(state='normal')
+        self.update_button.config(state='normal')
+
+        # Set date range
+        self.start_date_entry.config(mindate=self.min_date, maxdate=self.max_date)
+        self.end_date_entry.config(mindate=self.min_date, maxdate=self.max_date)
+        self.start_date_entry.set_date(self.min_date)
+        self.end_date_entry.set_date(self.max_date)
 
     def load_data(self):
         """Load and preprocess consumption and price data."""
         try:
+            self.status_label.config(text="Loading data...", fg='#e67e22')
+            self.root.update()
+
             # Load consumption data
             self.df_consumption_full = pd.read_excel(self.consumption_file)
             self.df_consumption_full['timestamp'] = pd.to_datetime(
@@ -102,10 +156,14 @@ class PowerConsumptionGUI:
             self.min_date = self.df_consumption_full['timestamp'].min().date()
             self.max_date = self.df_consumption_full['timestamp'].max().date()
 
+            self.status_label.config(text="✓ Data loaded successfully", fg='#27ae60')
+
         except Exception as e:
             messagebox.showerror("Error Loading Data", 
                                f"Failed to load data files:\n{str(e)}")
-            self.root.destroy()
+            self.status_label.config(text="Error loading data", fg='#e74c3c')
+            self.df_consumption_full = None
+            self.df_price_full = None
 
     def _on_mousewheel(self, event):
         """Handle mouse wheel scrolling."""
@@ -150,6 +208,84 @@ class PowerConsumptionGUI:
         )
         title_label.pack()
 
+        # File selection frame
+        file_frame = tk.Frame(self.root, bg='#34495e', padx=20, pady=15)
+        file_frame.pack(fill=tk.X, side=tk.TOP)
+
+        tk.Label(
+            file_frame, 
+            text="📁 Data Files:",
+            font=('Arial', 12, 'bold'),
+            bg='#34495e',
+            fg='white'
+        ).grid(row=0, column=0, columnspan=4, sticky='w', pady=(0, 10))
+
+        # Consumption file selection
+        tk.Label(
+            file_frame, 
+            text="Consumption File:",
+            font=('Arial', 10),
+            bg='#34495e',
+            fg='white'
+        ).grid(row=1, column=0, padx=(0, 10), sticky='w')
+
+        self.consumption_file_label = tk.Label(
+            file_frame,
+            text="No file selected" if not self.consumption_file else os.path.basename(self.consumption_file),
+            font=('Arial', 9),
+            bg='#34495e',
+            fg='#ecf0f1',
+            width=40,
+            anchor='w',
+            relief=tk.SUNKEN,
+            padx=5
+        )
+        self.consumption_file_label.grid(row=1, column=1, padx=(0, 10))
+
+        tk.Button(
+            file_frame,
+            text="Browse...",
+            font=('Arial', 9),
+            bg='#95a5a6',
+            fg='black',
+            command=self.browse_consumption_file,
+            padx=10,
+            cursor='hand2'
+        ).grid(row=1, column=2, padx=(0, 30))
+
+        # Price file selection
+        tk.Label(
+            file_frame, 
+            text="Price File:",
+            font=('Arial', 10),
+            bg='#34495e',
+            fg='white'
+        ).grid(row=2, column=0, padx=(0, 10), pady=(10, 0), sticky='w')
+
+        self.price_file_label = tk.Label(
+            file_frame,
+            text="No file selected" if not self.price_file else os.path.basename(self.price_file),
+            font=('Arial', 9),
+            bg='#34495e',
+            fg='#ecf0f1',
+            width=40,
+            anchor='w',
+            relief=tk.SUNKEN,
+            padx=5
+        )
+        self.price_file_label.grid(row=2, column=1, padx=(0, 10), pady=(10, 0))
+
+        tk.Button(
+            file_frame,
+            text="Browse...",
+            font=('Arial', 9),
+            bg='#95a5a6',
+            fg='black',
+            command=self.browse_price_file,
+            padx=10,
+            cursor='hand2'
+        ).grid(row=2, column=2, padx=(0, 30), pady=(10, 0))
+
         # Control frame for date selection
         control_frame = tk.Frame(self.root, bg='#ecf0f1', padx=20, pady=15)
         control_frame.pack(fill=tk.X, side=tk.TOP)
@@ -177,10 +313,8 @@ class PowerConsumptionGUI:
             foreground='white',
             borderwidth=2,
             date_pattern='yyyy-mm-dd',
-            mindate=self.min_date,
-            maxdate=self.max_date
+            state='disabled'  # Disabled until data is loaded
         )
-        self.start_date_entry.set_date(self.min_date)
         self.start_date_entry.grid(row=1, column=1, padx=(0, 30))
 
         # End date
@@ -198,10 +332,8 @@ class PowerConsumptionGUI:
             foreground='white',
             borderwidth=2,
             date_pattern='yyyy-mm-dd',
-            mindate=self.min_date,
-            maxdate=self.max_date
+            state='disabled'  # Disabled until data is loaded
         )
-        self.end_date_entry.set_date(self.max_date)
         self.end_date_entry.grid(row=1, column=3, padx=(0, 30))
 
         # Update button
@@ -216,14 +348,15 @@ class PowerConsumptionGUI:
             command=self.update_analysis,
             padx=20,
             pady=8,
-            cursor='hand2'
+            cursor='hand2',
+            state='disabled'  # Disabled until data is loaded
         )
         self.update_button.grid(row=1, column=4, padx=20)
 
         # Status label
         self.status_label = tk.Label(
             control_frame,
-            text="Ready",
+            text="Please select data files to begin",
             font=('Arial', 9),
             bg='#ecf0f1',
             fg='#7f8c8d'
@@ -300,7 +433,7 @@ class PowerConsumptionGUI:
             bg='#ecf0f1'
         ).pack(pady=10)
 
-        # Statistics labels - Updated to show monthly averages
+        # Statistics labels
         self.stats_labels = {}
         stats_info = [
             ('total_consumption', 'Total Consumption:'),
@@ -336,6 +469,13 @@ class PowerConsumptionGUI:
 
     def update_analysis(self):
         """Update all plots and statistics based on selected date range."""
+        if self.df_consumption_full is None or self.df_price_full is None:
+            messagebox.showwarning(
+                "No Data Loaded",
+                "Please select both consumption and price files first."
+            )
+            return
+
         try:
             self.status_label.config(text="Processing...", fg='#e67e22')
             self.root.update()
@@ -583,9 +723,10 @@ def main():
     """Main entry point for the application."""
     root = tk.Tk()
 
-    # File paths - update these to match your file names
-    consumption_file = 'verbrauch_anlage_919667_short.xlsx'
-    price_file = 'EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-22T20_37_02Z_short.csv'
+    # File paths - optional, can be selected via GUI
+    # Leave as None to use file picker, or provide default paths
+    consumption_file = None  # 'verbrauch_anlage_919667_short.xlsx'
+    price_file = None  # 'EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-22T20_37_02Z_short.csv'
 
     app = PowerConsumptionGUI(root, consumption_file, price_file)
     root.mainloop()
