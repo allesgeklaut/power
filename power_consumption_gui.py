@@ -4,6 +4,7 @@ Power Consumption Analysis GUI Application
 This GUI application provides interactive visualization and analysis of power 
 consumption data with the following features:
 - File picker for selecting consumption and price data files
+- Remembers last selected files for convenience
 - Date range selection for filtering data
 - Consumption profile comparison (selected period vs overall)
 - Monthly cost breakdown with fees separation
@@ -31,10 +32,13 @@ import numpy as np
 from datetime import datetime, timedelta
 from cost_calculator import PowerCostCalculator
 import os
+import json
 
 
 class PowerConsumptionGUI:
     """Main GUI application for power consumption analysis."""
+
+    CONFIG_FILE = 'power_consumption_config.json'
 
     def __init__(self, root, consumption_file=None, price_file=None):
         """
@@ -53,7 +57,15 @@ class PowerConsumptionGUI:
         self.root.title("Power Consumption Analysis Tool")
         self.root.geometry("1400x950")
 
-        # File paths
+        # Load saved configuration
+        saved_config = self.load_config()
+
+        # File paths - use provided or load from config
+        if consumption_file is None and saved_config:
+            consumption_file = saved_config.get('consumption_file')
+        if price_file is None and saved_config:
+            price_file = saved_config.get('price_file')
+
         self.consumption_file = consumption_file
         self.price_file = price_file
 
@@ -67,15 +79,50 @@ class PowerConsumptionGUI:
         # Create GUI components
         self.create_widgets()
 
-        # Load data if files provided
-        if consumption_file and price_file:
-            self.load_data()
-            self.update_analysis()
+        # Load data if files provided and exist
+        if self.consumption_file and self.price_file:
+            if os.path.exists(self.consumption_file) and os.path.exists(self.price_file):
+                self.load_data()
+                if self.df_consumption_full is not None:
+                    self.enable_analysis_controls()
+                    self.update_analysis()
+            else:
+                # Files from config don't exist anymore
+                self.consumption_file = None
+                self.price_file = None
+                self.consumption_file_label.config(text="No file selected")
+                self.price_file_label.config(text="No file selected")
+
+    def load_config(self):
+        """Load configuration from JSON file."""
+        try:
+            if os.path.exists(self.CONFIG_FILE):
+                with open(self.CONFIG_FILE, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"Could not load config: {e}")
+        return None
+
+    def save_config(self):
+        """Save configuration to JSON file."""
+        try:
+            config = {
+                'consumption_file': self.consumption_file,
+                'price_file': self.price_file
+            }
+            with open(self.CONFIG_FILE, 'w') as f:
+                json.dump(config, f, indent=2)
+        except Exception as e:
+            print(f"Could not save config: {e}")
 
     def browse_consumption_file(self):
         """Open file dialog to select consumption file."""
+        # Start in directory of last file if available
+        initialdir = os.path.dirname(self.consumption_file) if self.consumption_file else None
+
         filename = filedialog.askopenfilename(
             title="Select Consumption Data File",
+            initialdir=initialdir,
             filetypes=[
                 ("Excel files", "*.xlsx *.xls"),
                 ("All files", "*.*")
@@ -84,12 +131,17 @@ class PowerConsumptionGUI:
         if filename:
             self.consumption_file = filename
             self.consumption_file_label.config(text=os.path.basename(filename))
+            self.save_config()  # Save after selection
             self.check_and_load_data()
 
     def browse_price_file(self):
         """Open file dialog to select price file."""
+        # Start in directory of last file if available
+        initialdir = os.path.dirname(self.price_file) if self.price_file else None
+
         filename = filedialog.askopenfilename(
             title="Select Price Data File",
+            initialdir=initialdir,
             filetypes=[
                 ("CSV files", "*.csv"),
                 ("All files", "*.*")
@@ -98,6 +150,7 @@ class PowerConsumptionGUI:
         if filename:
             self.price_file = filename
             self.price_file_label.config(text=os.path.basename(filename))
+            self.save_config()  # Save after selection
             self.check_and_load_data()
 
     def check_and_load_data(self):
@@ -214,7 +267,7 @@ class PowerConsumptionGUI:
 
         tk.Label(
             file_frame, 
-            text="📁 Data Files:",
+            text="📁 Data Files (automatically saved):",
             font=('Arial', 12, 'bold'),
             bg='#34495e',
             fg='white'
@@ -356,7 +409,7 @@ class PowerConsumptionGUI:
         # Status label
         self.status_label = tk.Label(
             control_frame,
-            text="Please select data files to begin",
+            text="Please select data files to begin" if not (self.consumption_file and self.price_file) else "Ready",
             font=('Arial', 9),
             bg='#ecf0f1',
             fg='#7f8c8d'
@@ -724,9 +777,9 @@ def main():
     root = tk.Tk()
 
     # File paths - optional, can be selected via GUI
-    # Leave as None to use file picker, or provide default paths
-    consumption_file = None  # 'verbrauch_anlage_919667_short.xlsx'
-    price_file = None  # 'EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-22T20_37_02Z_short.csv'
+    # Leave as None to use file picker or load from saved config
+    consumption_file = None
+    price_file = None
 
     app = PowerConsumptionGUI(root, consumption_file, price_file)
     root.mainloop()
