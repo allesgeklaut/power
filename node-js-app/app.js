@@ -1037,46 +1037,62 @@ let lastCheckedFiles = new Set();
 
 // Check if File System Access API is supported
 function isFileSystemAccessSupported() {
-  return 'showDirectoryPicker' in window;
+  const supported = 'showDirectoryPicker' in window;
+  console.log('File System Access API supported:', supported);
+  return supported;
 }
 
 // Enable downloads folder monitoring
 async function enableDownloadsMonitor() {
+  console.log('Attempting to enable downloads monitoring...');
+  
   if (!isFileSystemAccessSupported()) {
     setStatus('❌ File System Access API not supported in this browser. Use Chrome or Edge.', 'error');
-    const toggleInput = document.getElementById('enable-downloads-monitor');
-    if (toggleInput) toggleInput.checked = false;
     return;
   }
   
   try {
     // Request access to Downloads folder
+    console.log('Requesting directory picker...');
     downloadsDirectoryHandle = await window.showDirectoryPicker({
       mode: 'read',
       startIn: 'downloads'
     });
     
+    console.log('Directory access granted:', downloadsDirectoryHandle.name);
+    
     const statusEl = document.getElementById('downloads-monitor-status');
-    statusEl.textContent = '✅ Monitoring Downloads folder for new files...';
-    statusEl.classList.add('visible');
+    if (statusEl) {
+      statusEl.textContent = '✅ Monitoring Downloads folder for new files...';
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#10b981';
+    }
     
     // Initialize file list
     await updateFileList();
+    console.log('Initial file list updated');
     
     // Start monitoring (check every 2 seconds)
+    if (monitoringInterval) {
+      clearInterval(monitoringInterval);
+    }
     monitoringInterval = setInterval(checkForNewFiles, 2000);
     
-    setStatus('✅ Auto-upload enabled', 'success');
+    setStatus('✅ Downloads folder monitoring enabled', 'success');
+    console.log('Monitoring started');
   } catch (error) {
     console.error('Error accessing Downloads folder:', error);
-    setStatus('❌ Could not access Downloads folder', 'error');
-    const toggleInput = document.getElementById('enable-downloads-monitor');
-    if (toggleInput) toggleInput.checked = false;
+    if (error.name === 'AbortError') {
+      setStatus('ℹ️ Directory access cancelled', 'info');
+    } else {
+      setStatus('❌ Could not access Downloads folder: ' + error.message, 'error');
+    }
   }
 }
 
 // Disable downloads folder monitoring
 function disableDownloadsMonitor() {
+  console.log('Disabling downloads monitoring...');
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
@@ -1086,25 +1102,45 @@ function disableDownloadsMonitor() {
   lastCheckedFiles.clear();
   
   const statusEl = document.getElementById('downloads-monitor-status');
-  statusEl.classList.remove('visible');
+  if (statusEl) {
+    statusEl.style.display = 'none';
+  }
   
   setStatus('Auto-upload disabled', 'ready');
+  console.log('Monitoring stopped');
 }
 
 // Update list of known files
 async function updateFileList() {
+  if (!downloadsDirectoryHandle) {
+    console.warn('No directory handle available');
+    return;
+  }
+  
   lastCheckedFiles.clear();
   
-  for await (const entry of downloadsDirectoryHandle.values()) {
-    if (entry.kind === 'file') {
-      lastCheckedFiles.add(entry.name);
+  try {
+    for await (const entry of downloadsDirectoryHandle.values()) {
+      if (entry.kind === 'file') {
+        lastCheckedFiles.add(entry.name);
+      }
     }
+    console.log('File list updated. Files found:', lastCheckedFiles.size);
+  } catch (error) {
+    console.error('Error updating file list:', error);
   }
 }
 
 // Check for new files in Downloads folder
 async function checkForNewFiles() {
-  if (!downloadsDirectoryHandle) return;
+  if (!downloadsDirectoryHandle) {
+    console.warn('No directory handle, stopping monitoring');
+    if (monitoringInterval) {
+      clearInterval(monitoringInterval);
+      monitoringInterval = null;
+    }
+    return;
+  }
   
   try {
     const currentFiles = new Set();
@@ -1115,6 +1151,7 @@ async function checkForNewFiles() {
         
         // Check if this is a new file
         if (!lastCheckedFiles.has(entry.name)) {
+          console.log('New file detected:', entry.name);
           await handleNewDownloadedFile(entry);
         }
       }
@@ -1123,6 +1160,7 @@ async function checkForNewFiles() {
     lastCheckedFiles = currentFiles;
   } catch (error) {
     console.error('Error checking for new files:', error);
+    // Don't stop monitoring on error, might be temporary
   }
 }
 
@@ -1130,52 +1168,75 @@ async function checkForNewFiles() {
 async function handleNewDownloadedFile(fileHandle) {
   const fileName = fileHandle.name.toLowerCase();
   
-  console.log('New file detected:', fileHandle.name);
+  console.log('Processing new file:', fileHandle.name);
   
-  // Check if it's a consumption file (Excel or CSV with "verbrauch" or "consumption")
+  // Check if it's a consumption file
   const isConsumptionFile = fileName.includes('verbrauch') || 
                            fileName.includes('consumption') ||
                            fileName.includes('anlage');
   
-  // Check if it's a price file (CSV with "preis" or "price" or "exaa" or "apg")
+  // Check if it's a price file
   const isPriceFile = fileName.includes('preis') || 
                      fileName.includes('price') ||
                      fileName.includes('exaa') ||
-                     fileName.includes('day-ahead');
+                     fileName.includes('day-ahead') ||
+                     fileName.includes('apg');
   
   if (isConsumptionFile || isPriceFile) {
     try {
+      console.log('File matches pattern:', isConsumptionFile ? 'consumption' : 'price');
       const file = await fileHandle.getFile();
       
       // Show notification
       const fileType = isConsumptionFile ? 'consumption' : 'price';
-      setStatus(`📥 Auto-detected ${fileType} file: ${file.name}`, 'success');
+      setStatus(`📥 Auto-detected ${fileType} file: ${file.name}`, 'info');
       
       // Load the file
       if (isConsumptionFile) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        document.getElementById('consumptionFile').files = dataTransfer.files;
-        displayFileName(
-          document.getElementById('consumption-filename'),
-          document.getElementById('consumption-drop-zone'),
-          file.name
-        );
-        handleConsumptionFile(file);
+        // Set file to consumption input
+        const fileInput = document.getElementById('consumption-file');
+        if (fileInput) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          
+          // Update UI
+          const filenameDisplay = document.getElementById('consumption-filename');
+          const dropZone = document.getElementById('consumption-drop-zone');
+          if (filenameDisplay && dropZone) {
+            displayFileName(filenameDisplay, dropZone, file.name);
+          }
+          
+          // Trigger processing
+          handleConsumptionFile(file);
+          console.log('Consumption file loaded successfully');
+        }
       } else if (isPriceFile) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        document.getElementById('priceFile').files = dataTransfer.files;
-        displayFileName(
-          document.getElementById('price-filename'),
-          document.getElementById('price-drop-zone'),
-          file.name
-        );
-        handlePriceFile(file);
+        // Set file to price input
+        const fileInput = document.getElementById('price-file');
+        if (fileInput) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          
+          // Update UI
+          const filenameDisplay = document.getElementById('price-filename');
+          const dropZone = document.getElementById('price-drop-zone');
+          if (filenameDisplay && dropZone) {
+            displayFileName(filenameDisplay, dropZone, file.name);
+          }
+          
+          // Trigger processing
+          handlePriceFile(file);
+          console.log('Price file loaded successfully');
+        }
       }
     } catch (error) {
       console.error('Error loading downloaded file:', error);
+      setStatus('❌ Error auto-loading file: ' + error.message, 'error');
     }
+  } else {
+    console.log('File does not match any pattern, ignoring:', fileName);
   }
 }
 
@@ -1415,9 +1476,17 @@ document.addEventListener('DOMContentLoaded', function() {
   if (enableMonitorBtn) {
     if (isFileSystemAccessSupported()) {
       enableMonitorBtn.addEventListener('click', enableDownloadsMonitor);
+      console.log('Downloads monitor button initialized');
     } else {
-      enableMonitorBtn.style.display = 'none';
+      // Hide the section if not supported
+      const monitorSection = enableMonitorBtn.closest('.downloads-monitor-section');
+      if (monitorSection) {
+        monitorSection.style.display = 'none';
+      }
+      console.log('File System Access API not supported');
     }
+  } else {
+    console.error('Enable downloads monitor button not found');
   }
   
   // Clear saved files button
@@ -1522,5 +1591,6 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('beforeunload', () => {
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
+    console.log('Monitoring stopped on page unload');
   }
 });
