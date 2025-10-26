@@ -1,7 +1,7 @@
 """
 Power Consumption Analysis GUI Application
 
-This GUI application provides interactive visualization and analysis of power
+This GUI application provides interactive visualization and analysis of power 
 consumption data with the following features:
 - Date range selection for filtering data
 - Consumption profile comparison (selected period vs overall)
@@ -90,11 +90,11 @@ class PowerConsumptionGUI:
                 self.price_file, sep=';', decimal=','
             )
             # Handle BOM in column name
-            time_col = [col for col in self.df_price_full.columns
-                        if 'Zeit von' in col][0]
+            time_col = [col for col in self.df_price_full.columns 
+                       if 'Zeit von' in col][0]
             self.df_price_full['timestamp'] = pd.to_datetime(
-                self.df_price_full[time_col],
-                format='%d.%m.%Y %H:%M:%S',
+                self.df_price_full[time_col], 
+                format='%d.%m.%Y %H:%M:%S', 
                 errors='coerce'
             )
 
@@ -103,9 +103,36 @@ class PowerConsumptionGUI:
             self.max_date = self.df_consumption_full['timestamp'].max().date()
 
         except Exception as e:
-            messagebox.showerror("Error Loading Data",
-                                 f"Failed to load data files:\n{str(e)}")
+            messagebox.showerror("Error Loading Data", 
+                               f"Failed to load data files:\n{str(e)}")
             self.root.destroy()
+
+    def _on_mousewheel(self, event):
+        """Handle mouse wheel scrolling."""
+        # Windows and MacOS have different event.delta values
+        if event.delta:
+            # Windows or MacOS
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        else:
+            # Linux
+            if event.num == 4:
+                self.canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                self.canvas.yview_scroll(1, "units")
+
+    def _bind_mousewheel(self, event):
+        """Bind mouse wheel to canvas scrolling."""
+        # Windows and MacOS
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        # Linux
+        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
+        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
+
+    def _unbind_mousewheel(self, event):
+        """Unbind mouse wheel from canvas scrolling."""
+        self.canvas.unbind_all("<MouseWheel>")
+        self.canvas.unbind_all("<Button-4>")
+        self.canvas.unbind_all("<Button-5>")
 
     def create_widgets(self):
         """Create all GUI widgets."""
@@ -114,7 +141,7 @@ class PowerConsumptionGUI:
         title_frame.pack(fill=tk.X, side=tk.TOP)
 
         title_label = tk.Label(
-            title_frame,
+            title_frame, 
             text="⚡ Power Consumption Analysis Tool",
             font=('Arial', 18, 'bold'),
             bg='#2c3e50',
@@ -129,7 +156,7 @@ class PowerConsumptionGUI:
 
         # Date range label
         tk.Label(
-            control_frame,
+            control_frame, 
             text="Date Range Selection:",
             font=('Arial', 12, 'bold'),
             bg='#ecf0f1'
@@ -137,7 +164,7 @@ class PowerConsumptionGUI:
 
         # Start date
         tk.Label(
-            control_frame,
+            control_frame, 
             text="Start Date:",
             font=('Arial', 10),
             bg='#ecf0f1'
@@ -158,7 +185,7 @@ class PowerConsumptionGUI:
 
         # End date
         tk.Label(
-            control_frame,
+            control_frame, 
             text="End Date:",
             font=('Arial', 10),
             bg='#ecf0f1'
@@ -208,25 +235,28 @@ class PowerConsumptionGUI:
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Canvas for scrolling
-        canvas = tk.Canvas(main_frame)
-        scrollbar = ttk.Scrollbar(
-            main_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas)
+        self.canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas)
 
-        scrollable_frame.bind(
+        self.scrollable_frame.bind(
             "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        canvas.pack(side="left", fill="both", expand=True)
+        # Bind mouse wheel events
+        self.canvas.bind("<Enter>", self._bind_mousewheel)
+        self.canvas.bind("<Leave>", self._unbind_mousewheel)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
         # Consumption profile plot
         profile_frame = tk.LabelFrame(
-            scrollable_frame,
+            self.scrollable_frame,
             text="Consumption Profile: Selected Period vs Overall",
             font=('Arial', 12, 'bold'),
             padx=10,
@@ -236,13 +266,12 @@ class PowerConsumptionGUI:
 
         self.fig_profile = Figure(figsize=(12, 5), dpi=100)
         self.ax_profile = self.fig_profile.add_subplot(111)
-        self.canvas_profile = FigureCanvasTkAgg(
-            self.fig_profile, profile_frame)
+        self.canvas_profile = FigureCanvasTkAgg(self.fig_profile, profile_frame)
         self.canvas_profile.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
         # Monthly costs plot
         costs_frame = tk.LabelFrame(
-            scrollable_frame,
+            self.scrollable_frame,
             text="Monthly Cost Breakdown",
             font=('Arial', 12, 'bold'),
             padx=10,
@@ -257,7 +286,7 @@ class PowerConsumptionGUI:
 
         # Statistics frame
         stats_frame = tk.Frame(
-            scrollable_frame,
+            self.scrollable_frame,
             bg='#ecf0f1',
             relief=tk.RIDGE,
             borderwidth=2
@@ -271,13 +300,14 @@ class PowerConsumptionGUI:
             bg='#ecf0f1'
         ).pack(pady=10)
 
-        # Statistics labels
+        # Statistics labels - Updated to show monthly averages
         self.stats_labels = {}
         stats_info = [
             ('total_consumption', 'Total Consumption:'),
             ('total_cost', 'Total Cost:'),
-            ('avg_daily', 'Average Daily Consumption:'),
-            ('avg_price', 'Average Price:')
+            ('avg_monthly_consumption', 'Average Monthly Consumption:'),
+            ('avg_monthly_cost', 'Average Monthly Cost:'),
+            ('avg_price', 'Average Price (Overall):')
         ]
 
         for key, label_text in stats_info:
@@ -289,7 +319,7 @@ class PowerConsumptionGUI:
                 text=label_text,
                 font=('Arial', 10, 'bold'),
                 bg='#ecf0f1',
-                width=25,
+                width=30,
                 anchor='w'
             ).pack(side=tk.LEFT)
 
@@ -320,8 +350,7 @@ class PowerConsumptionGUI:
                     "Invalid Date Range",
                     "Start date must be before or equal to end date."
                 )
-                self.status_label.config(
-                    text="Error: Invalid date range", fg='#e74c3c')
+                self.status_label.config(text="Error: Invalid date range", fg='#e74c3c')
                 return
 
             # Filter data
@@ -360,8 +389,7 @@ class PowerConsumptionGUI:
 
         # Create time-of-day profile for selected period
         df_selected['hhmm'] = df_selected['timestamp'].dt.strftime('%H:%M')
-        profile_selected = df_selected.groupby(
-            'hhmm')['Verbrauch'].sum().sort_index()
+        profile_selected = df_selected.groupby('hhmm')['Verbrauch'].sum().sort_index()
 
         # Create time-of-day profile for full dataset
         df_full = self.df_consumption_full.copy()
@@ -370,7 +398,7 @@ class PowerConsumptionGUI:
 
         # Normalize full profile to selected period scale
         scaling_factor = (
-            profile_selected.sum() / profile_full.sum()
+            profile_selected.sum() / profile_full.sum() 
             if profile_full.sum() > 0 else 1
         )
         profile_full_normalized = profile_full * scaling_factor
@@ -378,7 +406,7 @@ class PowerConsumptionGUI:
         # Plot
         x_pos = np.arange(len(profile_selected))
         self.ax_profile.bar(
-            x_pos,
+            x_pos, 
             profile_selected.values,
             color='skyblue',
             edgecolor='black',
@@ -397,10 +425,8 @@ class PowerConsumptionGUI:
             label='Overall (normalized)'
         )
 
-        self.ax_profile.set_xlabel(
-            'Time of Day (HH:MM)', fontsize=11, fontweight='bold')
-        self.ax_profile.set_ylabel(
-            'Consumption (kWh)', fontsize=11, fontweight='bold')
+        self.ax_profile.set_xlabel('Time of Day (HH:MM)', fontsize=11, fontweight='bold')
+        self.ax_profile.set_ylabel('Consumption (kWh)', fontsize=11, fontweight='bold')
         self.ax_profile.set_title(
             'Daily Consumption Profile Comparison',
             fontsize=13,
@@ -456,8 +482,7 @@ class PowerConsumptionGUI:
 
         # Calculate average price per month (cents/kWh)
         monthly_total = monthly_market + monthly_variable + fixed_fee
-        avg_price_per_month = (
-            monthly_total / monthly_consumption) * 100  # to cents/kWh
+        avg_price_per_month = (monthly_total / monthly_consumption) * 100  # to cents/kWh
 
         # Plot stacked bar chart
         x_pos = np.arange(len(months))
@@ -492,8 +517,8 @@ class PowerConsumptionGUI:
         self.ax_costs.grid(axis='y', linestyle='--', alpha=0.3)
 
         # Add total cost labels on top of bars
-        for i, (market, variable) in enumerate(zip(monthly_market.values,
-                                                   monthly_variable.values)):
+        for i, (market, variable) in enumerate(zip(monthly_market.values, 
+                                                    monthly_variable.values)):
             total = market + variable + fixed_fee
             avg_price = avg_price_per_month.iloc[i]
             self.ax_costs.text(
@@ -509,24 +534,32 @@ class PowerConsumptionGUI:
         self.canvas_costs.draw()
 
     def update_statistics(self, df_selected):
-        """Update statistics labels."""
+        """Update statistics labels with monthly averages."""
         # Calculate statistics
         total_consumption = df_selected['Verbrauch'].sum()
+
+        # Calculate date range
+        start_date = df_selected['timestamp'].min()
+        end_date = df_selected['timestamp'].max()
+
+        # Calculate number of months
+        num_months = ((end_date.year - start_date.year) * 12 + 
+                     end_date.month - start_date.month + 1)
 
         # Calculate total cost if cost calculator exists
         if self.cost_calculator:
             monthly_total = self.cost_calculator.monthly_total()
             total_cost = monthly_total.sum()
             avg_price = (total_cost / total_consumption) * 100  # cents/kWh
+
+            # Monthly averages
+            avg_monthly_consumption = total_consumption / num_months if num_months > 0 else 0
+            avg_monthly_cost = total_cost / num_months if num_months > 0 else 0
         else:
             total_cost = 0
             avg_price = 0
-
-        # Calculate date range
-        start_date = df_selected['timestamp'].min().date()
-        end_date = df_selected['timestamp'].max().date()
-        num_days = (end_date - start_date).days + 1
-        avg_daily = total_consumption / num_days if num_days > 0 else 0
+            avg_monthly_consumption = 0
+            avg_monthly_cost = 0
 
         # Update labels
         self.stats_labels['total_consumption'].config(
@@ -535,8 +568,11 @@ class PowerConsumptionGUI:
         self.stats_labels['total_cost'].config(
             text=f"{total_cost:.2f} EUR"
         )
-        self.stats_labels['avg_daily'].config(
-            text=f"{avg_daily:.2f} kWh/day"
+        self.stats_labels['avg_monthly_consumption'].config(
+            text=f"{avg_monthly_consumption:.2f} kWh/month"
+        )
+        self.stats_labels['avg_monthly_cost'].config(
+            text=f"{avg_monthly_cost:.2f} EUR/month"
         )
         self.stats_labels['avg_price'].config(
             text=f"{avg_price:.3f} cents/kWh"
@@ -548,8 +584,8 @@ def main():
     root = tk.Tk()
 
     # File paths - update these to match your file names
-    consumption_file = 'verbrauch_anlage_919667.xlsx'
-    price_file = 'EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-22T20_37_02Z.csv'
+    consumption_file = 'verbrauch_anlage_919667_short.xlsx'
+    price_file = 'EXAAD1P_2024-12-31T23_00_00Z_2025-12-31T23_00_00Z_15M_de_2025-10-22T20_37_02Z_short.csv'
 
     app = PowerConsumptionGUI(root, consumption_file, price_file)
     root.mainloop()
