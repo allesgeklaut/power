@@ -5,9 +5,9 @@ This GUI application provides interactive visualization and analysis of power
 consumption data with the following features:
 - File picker for selecting consumption and price data files
 - Remembers last selected files for convenience
-- Date range selection for filtering data
+- Date range selection for filtering data (affects consumption profile only)
 - Consumption profile comparison (selected period vs overall)
-- Monthly cost breakdown with fees separation
+- Monthly cost breakdown with fees separation (always shows full data)
 - Average electricity price calculation per month
 
 Dependencies:
@@ -161,6 +161,22 @@ class PowerConsumptionGUI:
                 self.enable_analysis_controls()
                 self.update_analysis()
 
+    def get_default_start_date(self):
+        """
+        Get default start date - first day of current month if data available,
+        otherwise min_date from data.
+        """
+        # Get first day of current month
+        today = datetime.now().date()
+        current_month_start = today.replace(day=1)
+
+        # Check if we have data for current month
+        if current_month_start >= self.min_date and current_month_start <= self.max_date:
+            return current_month_start
+        else:
+            # Current month not available, use min_date
+            return self.min_date
+
     def enable_analysis_controls(self):
         """Enable date selection and update button after data is loaded."""
         self.start_date_entry.config(state='normal')
@@ -170,7 +186,10 @@ class PowerConsumptionGUI:
         # Set date range
         self.start_date_entry.config(mindate=self.min_date, maxdate=self.max_date)
         self.end_date_entry.config(mindate=self.min_date, maxdate=self.max_date)
-        self.start_date_entry.set_date(self.min_date)
+
+        # Set default dates
+        default_start = self.get_default_start_date()
+        self.start_date_entry.set_date(default_start)
         self.end_date_entry.set_date(self.max_date)
 
     def load_data(self):
@@ -343,13 +362,24 @@ class PowerConsumptionGUI:
         control_frame = tk.Frame(self.root, bg='#ecf0f1', padx=20, pady=15)
         control_frame.pack(fill=tk.X, side=tk.TOP)
 
-        # Date range label
+        # Date range label with note
+        date_label_frame = tk.Frame(control_frame, bg='#ecf0f1')
+        date_label_frame.grid(row=0, column=0, columnspan=6, sticky='w', pady=(0, 5))
+
         tk.Label(
-            control_frame, 
+            date_label_frame, 
             text="Date Range Selection:",
             font=('Arial', 12, 'bold'),
             bg='#ecf0f1'
-        ).grid(row=0, column=0, columnspan=4, sticky='w', pady=(0, 10))
+        ).pack(side=tk.LEFT)
+
+        tk.Label(
+            date_label_frame, 
+            text="(affects Consumption Profile only)",
+            font=('Arial', 9, 'italic'),
+            bg='#ecf0f1',
+            fg='#7f8c8d'
+        ).pack(side=tk.LEFT, padx=(10, 0))
 
         # Start date
         tk.Label(
@@ -458,7 +488,7 @@ class PowerConsumptionGUI:
         # Monthly costs plot
         costs_frame = tk.LabelFrame(
             self.scrollable_frame,
-            text="Monthly Cost Breakdown",
+            text="Monthly Cost Breakdown (All Available Data)",
             font=('Arial', 12, 'bold'),
             padx=10,
             pady=10
@@ -481,7 +511,7 @@ class PowerConsumptionGUI:
 
         tk.Label(
             stats_frame,
-            text="📊 Statistics Summary",
+            text="📊 Statistics Summary (Selected Period for Consumption Profile)",
             font=('Arial', 12, 'bold'),
             bg='#ecf0f1'
         ).pack(pady=10)
@@ -533,7 +563,7 @@ class PowerConsumptionGUI:
             self.status_label.config(text="Processing...", fg='#e67e22')
             self.root.update()
 
-            # Get selected dates
+            # Get selected dates for consumption profile
             start_date = self.start_date_entry.get_date()
             end_date = self.end_date_entry.get_date()
 
@@ -546,7 +576,7 @@ class PowerConsumptionGUI:
                 self.status_label.config(text="Error: Invalid date range", fg='#e74c3c')
                 return
 
-            # Filter data
+            # Filter data for consumption profile
             df_selected = self.df_consumption_full[
                 (self.df_consumption_full['timestamp'].dt.date >= start_date) &
                 (self.df_consumption_full['timestamp'].dt.date <= end_date)
@@ -560,13 +590,13 @@ class PowerConsumptionGUI:
                 self.status_label.config(text="Error: No data", fg='#e74c3c')
                 return
 
-            # Update consumption profile plot
+            # Update consumption profile plot (uses selected date range)
             self.plot_consumption_profile(df_selected)
 
-            # Update monthly costs plot
-            self.plot_monthly_costs(df_selected, start_date, end_date)
+            # Update monthly costs plot (uses ALL data)
+            self.plot_monthly_costs_full()
 
-            # Update statistics
+            # Update statistics (uses selected date range)
             self.update_statistics(df_selected)
 
             self.status_label.config(text="✓ Analysis updated", fg='#27ae60')
@@ -639,21 +669,19 @@ class PowerConsumptionGUI:
         self.fig_profile.tight_layout()
         self.canvas_profile.draw()
 
-    def plot_monthly_costs(self, df_selected, start_date, end_date):
-        """Plot monthly cost breakdown."""
+    def plot_monthly_costs_full(self):
+        """Plot monthly cost breakdown using ALL available data."""
         # Clear previous plot
         self.ax_costs.clear()
 
-        # Filter price data for same period
-        df_price_filtered = self.df_price_full[
-            (self.df_price_full['timestamp'].dt.date >= start_date) &
-            (self.df_price_full['timestamp'].dt.date <= end_date)
-        ].copy()
+        # Use ALL data (not filtered by date selection)
+        df_full_consumption = self.df_consumption_full.copy()
+        df_full_price = self.df_price_full.copy()
 
-        # Initialize cost calculator
+        # Initialize cost calculator with full data
         self.cost_calculator = PowerCostCalculator(
-            consumption_df=df_selected,
-            price_df=df_price_filtered,
+            consumption_df=df_full_consumption,
+            price_df=df_full_price,
             price_col='Preis MC Auktion [EUR/MWh]',
             consumption_col='Verbrauch',
             timestamp_col='timestamp',
@@ -699,7 +727,7 @@ class PowerConsumptionGUI:
         self.ax_costs.set_xlabel('Month', fontsize=11, fontweight='bold')
         self.ax_costs.set_ylabel('Cost (EUR)', fontsize=11, fontweight='bold')
         self.ax_costs.set_title(
-            'Monthly Cost Breakdown by Component',
+            'Monthly Cost Breakdown by Component (All Available Data)',
             fontsize=13,
             fontweight='bold',
             pad=15
@@ -727,7 +755,7 @@ class PowerConsumptionGUI:
         self.canvas_costs.draw()
 
     def update_statistics(self, df_selected):
-        """Update statistics labels with monthly averages."""
+        """Update statistics labels with monthly averages (based on selected period)."""
         # Calculate statistics
         total_consumption = df_selected['Verbrauch'].sum()
 
@@ -740,8 +768,27 @@ class PowerConsumptionGUI:
                      end_date.month - start_date.month + 1)
 
         # Calculate total cost if cost calculator exists
+        # Note: cost_calculator is now based on FULL data from plot_monthly_costs_full
+        # So we need to recalculate for selected period
         if self.cost_calculator:
-            monthly_total = self.cost_calculator.monthly_total()
+            # Filter price data for selected period
+            df_price_filtered = self.df_price_full[
+                (self.df_price_full['timestamp'].dt.date >= start_date.date()) &
+                (self.df_price_full['timestamp'].dt.date <= end_date.date())
+            ].copy()
+
+            # Create temporary calculator for selected period statistics
+            temp_calculator = PowerCostCalculator(
+                consumption_df=df_selected,
+                price_df=df_price_filtered,
+                price_col='Preis MC Auktion [EUR/MWh]',
+                consumption_col='Verbrauch',
+                timestamp_col='timestamp',
+                fixed_fee=2.16,
+                variable_fee_per_kwh=0.018
+            )
+
+            monthly_total = temp_calculator.monthly_total()
             total_cost = monthly_total.sum()
             avg_price = (total_cost / total_consumption) * 100  # cents/kWh
 
