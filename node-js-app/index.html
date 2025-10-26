@@ -9,60 +9,45 @@
 <body>
     <!-- Header Section -->
     <header class="app-header">
-        <h1>⚡ Power Consumption Analysis Tool</h1>
+        <div class="header-content">
+            <h1>⚡ Power Analysis</h1>
+            <div class="header-links">
+                <a href="https://mein.oekostrom.at/a-p/" target="_blank" class="header-badge">📊 Consumption Data</a>
+                <a href="https://markt.apg.at/transparenz/uebertragung/day-ahead-preise/" target="_blank" class="header-badge">💰 Price Data</a>
+            </div>
+        </div>
     </header>
 
     <!-- File Upload Section -->
     <section class="upload-section">
-        <!-- Data Sources Section -->
-        <div class="data-sources-section" style="background-color: #ecf0f1; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0; font-size: 16px; color: #2c3e50;">📊 Data Sources</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="source-link-box" style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #3498db;">
-                    <div style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">Consumption Data</div>
-                    <a href="https://mein.oekostrom.at/a-p/" target="_blank" style="color: #3498db; text-decoration: none; font-size: 14px;">
-                        🔗 mein.oekostrom.at/a-p
-                    </a>
-                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">Download your consumption file here</div>
-                </div>
-                <div class="source-link-box" style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #e67e22;">
-                    <div style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">Price Data</div>
-                    <a href="https://markt.apg.at/transparenz/uebertragung/day-ahead-preise/" target="_blank" style="color: #e67e22; text-decoration: none; font-size: 14px;">
-                        🔗 markt.apg.at Day-Ahead Prices
-                    </a>
-                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">Download Day-Ahead price data here</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- File Upload with Drag & Drop -->
-        <div class="upload-container">
-            <div class="upload-group">
-                <label class="upload-label">📁 Consumption File (Excel/CSV)</label>
-                <div id="consumption-drop-zone" class="drop-zone">
-                    <div class="drop-zone-content">
-                        <span class="drop-zone-icon">📤</span>
-                        <span class="drop-zone-text">Drag &amp; drop file here or click to browse</span>
-                        <input type="file" id="consumptionFile" accept=".xlsx,.xls,.csv" style="display: none;">
+        <div class="section-card">
+            <h2 class="section-title">📁 Data Files</h2>
+            <div class="upload-container">
+                <div class="upload-group">
+                    <div class="upload-label-compact">⚡ Consumption</div>
+                    <div id="consumption-drop-zone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <span class="drop-zone-icon">📤</span>
+                            <span class="drop-zone-text">Drop file or click</span>
+                            <input type="file" id="consumption-file" accept=".xlsx,.xls,.csv" style="display: none;">
+                        </div>
+                        <div id="consumption-filename" class="filename-display"></div>
                     </div>
-                    <div id="consumption-filename" class="filename-display"></div>
                 </div>
-            </div>
-            <div class="upload-group">
-                <label class="upload-label">📈 Price File (CSV)</label>
-                <div id="price-drop-zone" class="drop-zone">
-                    <div class="drop-zone-content">
-                        <span class="drop-zone-icon">📤</span>
-                        <span class="drop-zone-text">Drag &amp; drop file here or click to browse</span>
-                        <input type="file" id="priceFile" accept=".csv" style="display: none;">
+                <div class="upload-group">
+                    <div class="upload-label-compact">💰 Price</div>
+                    <div id="price-drop-zone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <span class="drop-zone-icon">📤</span>
+                            <span class="drop-zone-text">Drop file or click</span>
+                            <input type="file" id="price-file" accept=".csv" style="display: none;">
+                        </div>
+                        <div id="price-filename" class="filename-display"></div>
                     </div>
-                    <div id="price-filename" class="filename-display"></div>
                 </div>
-            </div>
         </div>
-        <div class="sample-data-container">
-            <button id="loadSampleBtn" class="btn btn-sample">📦 Load Sample Data</button>
-            <button id="clearSavedBtn" class="btn btn-danger">🗑️ Clear Saved Files</button>
+        <div class="upload-actions">
+            <button id="clear-saved-btn" class="btn btn-secondary">🗑️ Clear Saved Files</button>
         </div>
 
         <!-- Downloads Folder Monitoring Section -->
@@ -80,27 +65,22 @@
 
     <!-- Date Range Controls Section -->
     <section class="controls-section">
-        <div class="controls-container">
-            <div class="controls-header">
-                <h2>Date Range Selection</h2>
-                <span class="controls-note">(affects Consumption Profile only)</span>
-            </div>
-            <div class="date-controls">
-                <div class="date-input-group">
-                    <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" class="date-input">
+        <div class="section-card">
+            <h2 class="section-title">📅 Analysis Period</h2>
+            <div class="date-controls-compact">
+                <div class="date-input-inline">
+                    <label for="startDate">From</label>
+                    <input type="date" id="start-date" class="date-input">
                 </div>
-                <div class="date-input-group">
-                    <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" class="date-input">
+                <div class="date-input-inline">
+                    <label for="endDate">To</label>
+                    <input type="date" id="end-date" class="date-input">
                 </div>
+                <button id="start-of-month-btn" class="btn btn-icon" title="Start of Month">📅</button>
+                <button id="full-range-btn" class="btn btn-icon" title="Full Range">📊</button>
+                <button id="update-btn" class="btn btn-primary">🔄 Update</button>
             </div>
-            <div class="quick-actions">
-                <button id="startOfMonthBtn" class="btn btn-quick btn-purple">📅 Start of Month</button>
-                <button id="fullRangeBtn" class="btn btn-quick btn-teal">📊 Full Range</button>
-            </div>
-            <button id="updateBtn" class="btn btn-update">🔄 Update Analysis</button>
-            <div id="statusIndicator" class="status-indicator">Ready</div>
+            <div id="status-indicator" class="status-indicator">Ready</div>
         </div>
     </section>
 
@@ -108,43 +88,66 @@
     <main class="main-content">
         <!-- Chart 1: Consumption Profile -->
         <section class="chart-section">
-            <h2>Consumption Profile: Selected Period vs Overall</h2>
-            <div class="chart-container">
-                <canvas id="consumptionChart"></canvas>
+            <div class="section-card">
+                <h2 class="section-title">⚡ Consumption Profile</h2>
+                <p class="chart-subtitle">Selected period vs overall pattern</p>
+                <div class="chart-container">
+                    <canvas id="consumption-chart"></canvas>
+                </div>
             </div>
         </section>
 
         <!-- Chart 2: Monthly Cost Breakdown -->
         <section class="chart-section">
-            <h2>Monthly Cost Breakdown &amp; Consumption (All Available Data)</h2>
-            <div class="chart-container">
-                <canvas id="monthlyCostChart"></canvas>
+            <div class="section-card">
+                <h2 class="section-title">💰 Monthly Analysis</h2>
+                <p class="chart-subtitle">Cost breakdown &amp; consumption over time</p>
+                <div class="chart-container">
+                    <canvas id="monthly-cost-chart"></canvas>
+                </div>
             </div>
         </section>
 
         <!-- Statistics Panel -->
         <section class="stats-section">
-            <h2>📊 Statistics Summary (Selected Period for Consumption Profile)</h2>
-            <div class="stats-grid">
-                <div class="stat-row">
-                    <span class="stat-label">Total Consumption:</span>
-                    <span class="stat-value" id="statTotalConsumption">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Total Cost:</span>
-                    <span class="stat-value" id="statTotalCost">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Average Monthly Consumption:</span>
-                    <span class="stat-value" id="statAvgMonthlyConsumption">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Average Monthly Cost:</span>
-                    <span class="stat-value" id="statAvgMonthlyCost">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Average Price (Overall):</span>
-                    <span class="stat-value" id="statAvgPrice">-</span>
+            <div class="section-card">
+                <h2 class="section-title">📊 Statistics</h2>
+                <div class="stats-grid-compact">
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Total Usage</div>
+                            <div class="stat-value" id="stat-total-consumption">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Total Cost</div>
+                            <div class="stat-value" id="stat-total-cost">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Avg Monthly</div>
+                            <div class="stat-value" id="stat-avg-monthly-consumption">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💵</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Avg Cost</div>
+                            <div class="stat-value" id="stat-avg-monthly-cost">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Avg Price</div>
+                            <div class="stat-value" id="stat-avg-price">-</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

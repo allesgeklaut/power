@@ -251,7 +251,7 @@ function roundToNearestQuarter(date) {
 }
 
 function setStatus(message, type = 'ready') {
-  const indicator = document.getElementById('statusIndicator');
+  const indicator = document.getElementById('status-indicator');
   indicator.textContent = message;
   indicator.className = `status-indicator ${type}`;
 }
@@ -569,7 +569,7 @@ function calculateStatistics(data) {
 
 // Chart Functions
 function createConsumptionChart(filteredData, allData) {
-  const ctx = document.getElementById('consumptionChart').getContext('2d');
+  const ctx = document.getElementById('consumption-chart').getContext('2d');
   
   // Destroy existing chart
   if (state.charts.consumption) {
@@ -662,7 +662,7 @@ function createConsumptionChart(filteredData, allData) {
 }
 
 function createMonthlyCostChart(data) {
-  const ctx = document.getElementById('monthlyCostChart').getContext('2d');
+  const ctx = document.getElementById('monthly-cost-chart').getContext('2d');
   
   // Destroy existing chart
   if (state.charts.monthlyCost) {
@@ -795,11 +795,11 @@ function createMonthlyCostChart(data) {
 function updateStatistics(data) {
   const stats = calculateStatistics(data);
   
-  document.getElementById('statTotalConsumption').textContent = `${stats.totalConsumption} kWh`;
-  document.getElementById('statTotalCost').textContent = `€${stats.totalCost}`;
-  document.getElementById('statAvgMonthlyConsumption').textContent = `${stats.avgMonthlyConsumption} kWh/month`;
-  document.getElementById('statAvgMonthlyCost').textContent = `€${stats.avgMonthlyCost}/month`;
-  document.getElementById('statAvgPrice').textContent = `${stats.avgPrice} ¢/kWh`;
+  document.getElementById('stat-total-consumption').textContent = `${stats.totalConsumption} kWh`;
+  document.getElementById('stat-total-cost').textContent = `€${stats.totalCost}`;
+  document.getElementById('stat-avg-monthly-consumption').textContent = `${stats.avgMonthlyConsumption} kWh/month`;
+  document.getElementById('stat-avg-monthly-cost').textContent = `€${stats.avgMonthlyCost}/month`;
+  document.getElementById('stat-avg-price').textContent = `${stats.avgPrice} ¢/kWh`;
 }
 
 // Server-Side Persistence Functions
@@ -913,8 +913,8 @@ async function clearSavedFiles() {
       state.maxDate = null;
       
       // Clear file inputs
-      document.getElementById('consumptionFile').value = '';
-      document.getElementById('priceFile').value = '';
+      document.getElementById('consumption-file').value = '';
+      document.getElementById('price-file').value = '';
       
       // Clear filename displays and drop zones
       const consumptionFilename = document.getElementById('consumption-filename');
@@ -931,8 +931,8 @@ async function clearSavedFiles() {
       priceDropZone.classList.remove('has-file');
       
       // Clear date inputs
-      document.getElementById('startDate').value = '';
-      document.getElementById('endDate').value = '';
+      document.getElementById('start-date').value = '';
+      document.getElementById('end-date').value = '';
       
       // Clear charts
       if (state.charts.consumption) {
@@ -945,11 +945,11 @@ async function clearSavedFiles() {
       }
       
       // Clear statistics
-      document.getElementById('statTotalConsumption').textContent = '-';
-      document.getElementById('statTotalCost').textContent = '-';
-      document.getElementById('statAvgMonthlyConsumption').textContent = '-';
-      document.getElementById('statAvgMonthlyCost').textContent = '-';
-      document.getElementById('statAvgPrice').textContent = '-';
+      document.getElementById('stat-total-consumption').textContent = '-';
+      document.getElementById('stat-total-cost').textContent = '-';
+      document.getElementById('stat-avg-monthly-consumption').textContent = '-';
+      document.getElementById('stat-avg-monthly-cost').textContent = '-';
+      document.getElementById('stat-avg-price').textContent = '-';
       
       console.log('All data cleared from client and server');
     } else {
@@ -1044,6 +1044,8 @@ function isFileSystemAccessSupported() {
 async function enableDownloadsMonitor() {
   if (!isFileSystemAccessSupported()) {
     setStatus('❌ File System Access API not supported in this browser. Use Chrome or Edge.', 'error');
+    const toggleInput = document.getElementById('enable-downloads-monitor');
+    if (toggleInput) toggleInput.checked = false;
     return;
   }
   
@@ -1056,8 +1058,7 @@ async function enableDownloadsMonitor() {
     
     const statusEl = document.getElementById('downloads-monitor-status');
     statusEl.textContent = '✅ Monitoring Downloads folder for new files...';
-    statusEl.style.display = 'block';
-    statusEl.style.color = '#27ae60';
+    statusEl.classList.add('visible');
     
     // Initialize file list
     await updateFileList();
@@ -1065,11 +1066,29 @@ async function enableDownloadsMonitor() {
     // Start monitoring (check every 2 seconds)
     monitoringInterval = setInterval(checkForNewFiles, 2000);
     
-    setStatus('✅ Downloads folder monitoring enabled', 'success');
+    setStatus('✅ Auto-upload enabled', 'success');
   } catch (error) {
     console.error('Error accessing Downloads folder:', error);
-    setStatus('❌ Could not access Downloads folder: ' + error.message, 'error');
+    setStatus('❌ Could not access Downloads folder', 'error');
+    const toggleInput = document.getElementById('enable-downloads-monitor');
+    if (toggleInput) toggleInput.checked = false;
   }
+}
+
+// Disable downloads folder monitoring
+function disableDownloadsMonitor() {
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval);
+    monitoringInterval = null;
+  }
+  
+  downloadsDirectoryHandle = null;
+  lastCheckedFiles.clear();
+  
+  const statusEl = document.getElementById('downloads-monitor-status');
+  statusEl.classList.remove('visible');
+  
+  setStatus('Auto-upload disabled', 'ready');
 }
 
 // Update list of known files
@@ -1304,13 +1323,13 @@ function tryMergeAndUpdate() {
     state.endDate = state.maxDate;
     
     // Update date inputs
-    document.getElementById('startDate').min = formatDateForInput(state.minDate);
-    document.getElementById('startDate').max = formatDateForInput(state.maxDate);
-    document.getElementById('startDate').value = formatDateForInput(state.startDate);
+    document.getElementById('start-date').min = formatDateForInput(state.minDate);
+    document.getElementById('start-date').max = formatDateForInput(state.maxDate);
+    document.getElementById('start-date').value = formatDateForInput(state.startDate);
     
-    document.getElementById('endDate').min = formatDateForInput(state.minDate);
-    document.getElementById('endDate').max = formatDateForInput(state.maxDate);
-    document.getElementById('endDate').value = formatDateForInput(state.endDate);
+    document.getElementById('end-date').min = formatDateForInput(state.minDate);
+    document.getElementById('end-date').max = formatDateForInput(state.maxDate);
+    document.getElementById('end-date').value = formatDateForInput(state.endDate);
     
     // Log processing summary
     console.log('=== PROCESSING SUMMARY ===');
@@ -1356,116 +1375,147 @@ function updateAnalysis() {
   setStatus('Analysis updated', 'success');
 }
 
-function loadSampleData() {
-  setStatus('Loading sample data...', 'processing');
-  
-  // Process sample data
-  state.consumptionData = processConsumptionData(SAMPLE_CONSUMPTION);
-  state.priceData = processPriceData(SAMPLE_PRICE);
-  
-  // Update filenames
-  displayFileName(
-    document.getElementById('consumption-filename'),
-    document.getElementById('consumption-drop-zone'),
-    'sample_consumption.csv'
-  );
-  displayFileName(
-    document.getElementById('price-filename'),
-    document.getElementById('price-drop-zone'),
-    'sample_price.csv'
-  );
-  
-  // Merge and update
-  tryMergeAndUpdate();
-}
+
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('=== INITIALIZING APPLICATION ===');
+  
   // Try to load saved files from server
   loadSavedFiles();
   
   // Setup drag & drop zones
-  setupDropZone('consumption-drop-zone', 'consumptionFile', 'consumption-filename');
-  setupDropZone('price-drop-zone', 'priceFile', 'price-filename');
+  setupDropZone('consumption-drop-zone', 'consumption-file', 'consumption-filename');
+  setupDropZone('price-drop-zone', 'price-file', 'price-filename');
   
   // File upload listeners
-  document.getElementById('consumptionFile').addEventListener('change', function(e) {
-    if (e.target.files.length > 0) {
-      handleConsumptionFile(e.target.files[0]);
-    }
-  });
+  const consumptionFileInput = document.getElementById('consumption-file');
+  const priceFileInput = document.getElementById('price-file');
   
-  document.getElementById('priceFile').addEventListener('change', function(e) {
-    if (e.target.files.length > 0) {
-      handlePriceFile(e.target.files[0]);
-    }
-  });
-  
-  // Downloads monitoring button
-  const enableBtn = document.getElementById('enable-downloads-monitor');
-  if (enableBtn) {
-    // Hide the feature if not supported
-    if (!isFileSystemAccessSupported()) {
-      document.querySelector('.downloads-monitor-section').style.display = 'none';
-    }
-    
-    enableBtn.addEventListener('click', enableDownloadsMonitor);
+  if (consumptionFileInput) {
+    consumptionFileInput.addEventListener('change', function(e) {
+      console.log('Consumption file input changed');
+      if (e.target.files.length > 0) {
+        handleConsumptionFile(e.target.files[0]);
+      }
+    });
   }
   
-  // Sample data button
-  document.getElementById('loadSampleBtn').addEventListener('click', loadSampleData);
+  if (priceFileInput) {
+    priceFileInput.addEventListener('change', function(e) {
+      console.log('Price file input changed');
+      if (e.target.files.length > 0) {
+        handlePriceFile(e.target.files[0]);
+      }
+    });
+  }
+  
+  // Downloads monitoring button
+  const enableMonitorBtn = document.getElementById('enable-downloads-monitor');
+  if (enableMonitorBtn) {
+    if (isFileSystemAccessSupported()) {
+      enableMonitorBtn.addEventListener('click', enableDownloadsMonitor);
+    } else {
+      enableMonitorBtn.style.display = 'none';
+    }
+  }
   
   // Clear saved files button
-  document.getElementById('clearSavedBtn').addEventListener('click', clearSavedFiles);
+  const clearSavedBtn = document.getElementById('clear-saved-btn');
+  if (clearSavedBtn) {
+    clearSavedBtn.addEventListener('click', clearSavedFiles);
+    console.log('Clear saved button listener registered');
+  }
   
   // Date change listeners
-  document.getElementById('startDate').addEventListener('change', function(e) {
-    const newDate = new Date(e.target.value);
-    if (!isNaN(newDate.getTime())) {
-      state.startDate = newDate;
-    }
-  });
+  const startDateInput = document.getElementById('start-date');
+  const endDateInput = document.getElementById('end-date');
   
-  document.getElementById('endDate').addEventListener('change', function(e) {
-    const newDate = new Date(e.target.value);
-    if (!isNaN(newDate.getTime())) {
-      // Set to end of day
-      newDate.setHours(23, 59, 59, 999);
-      state.endDate = newDate;
-    }
-  });
+  if (startDateInput) {
+    startDateInput.addEventListener('change', function(e) {
+      console.log('Start date changed to:', e.target.value);
+      const newDate = new Date(e.target.value);
+      if (!isNaN(newDate.getTime())) {
+        state.startDate = newDate;
+        console.log('State updated - startDate:', state.startDate);
+      }
+    });
+  }
+  
+  if (endDateInput) {
+    endDateInput.addEventListener('change', function(e) {
+      console.log('End date changed to:', e.target.value);
+      const newDate = new Date(e.target.value);
+      if (!isNaN(newDate.getTime())) {
+        // Set to end of day
+        newDate.setHours(23, 59, 59, 999);
+        state.endDate = newDate;
+        console.log('State updated - endDate:', state.endDate);
+      }
+    });
+  }
   
   // Quick action buttons
-  document.getElementById('startOfMonthBtn').addEventListener('click', function() {
-    if (state.maxDate) {
+  const startOfMonthBtn = document.getElementById('start-of-month-btn');
+  const fullRangeBtn = document.getElementById('full-range-btn');
+  const updateBtn = document.getElementById('update-btn');
+  
+  if (startOfMonthBtn) {
+    startOfMonthBtn.addEventListener('click', function() {
+      console.log('Start of Month button clicked');
+      if (!state.maxDate) {
+        setStatus('❌ Please upload data files first', 'error');
+        return;
+      }
+      
       const firstOfMonth = new Date(state.maxDate.getFullYear(), state.maxDate.getMonth(), 1);
       state.startDate = firstOfMonth > state.minDate ? firstOfMonth : state.minDate;
-      document.getElementById('startDate').value = formatDateForInput(state.startDate);
+      state.endDate = state.maxDate;
+      
+      document.getElementById('start-date').value = formatDateForInput(state.startDate);
+      document.getElementById('end-date').value = formatDateForInput(state.endDate);
+      
+      console.log('Set to start of month:', state.startDate, 'to', state.endDate);
       updateAnalysis();
-    }
-  });
+    });
+    console.log('Start of Month button listener registered');
+  }
   
-  document.getElementById('fullRangeBtn').addEventListener('click', function() {
-    if (state.minDate && state.maxDate) {
+  if (fullRangeBtn) {
+    fullRangeBtn.addEventListener('click', function() {
+      console.log('Full Range button clicked');
+      if (!state.minDate || !state.maxDate) {
+        setStatus('❌ Please upload data files first', 'error');
+        return;
+      }
+      
       state.startDate = state.minDate;
       state.endDate = state.maxDate;
-      document.getElementById('startDate').value = formatDateForInput(state.startDate);
-      document.getElementById('endDate').value = formatDateForInput(state.endDate);
+      
+      document.getElementById('start-date').value = formatDateForInput(state.startDate);
+      document.getElementById('end-date').value = formatDateForInput(state.endDate);
+      
+      console.log('Set to full range:', state.startDate, 'to', state.endDate);
       updateAnalysis();
-    }
-  });
+    });
+    console.log('Full Range button listener registered');
+  }
   
-  // Update analysis button
-  document.getElementById('updateBtn').addEventListener('click', function() {
-    if (state.mergedData.length > 0) {
-      updateAnalysis();
-    } else {
-      setStatus('Please load data first', 'error');
-    }
-  });
+  if (updateBtn) {
+    updateBtn.addEventListener('click', function() {
+      console.log('Update button clicked');
+      if (state.mergedData.length > 0) {
+        updateAnalysis();
+      } else {
+        setStatus('❌ Please upload data files first', 'error');
+      }
+    });
+    console.log('Update button listener registered');
+  }
   
   // Initialize status
-  setStatus('Ready - Please upload files or load sample data', 'ready');
+  setStatus('Ready - Please upload data files', 'ready');
+  console.log('=== APPLICATION INITIALIZED ===');
 });
 
 // Clean up on page unload
