@@ -802,13 +802,150 @@ function updateStatistics(data) {
   document.getElementById('statAvgPrice').textContent = `${stats.avgPrice} ¢/kWh`;
 }
 
+// Server-Side Persistence Functions
+
+/**
+ * Load saved files from server on page load
+ */
+async function loadSavedFiles() {
+  try {
+    console.log('Checking for saved files on server...');
+    const response = await fetch('/api/files');
+    const result = await response.json();
+    
+    if (result.success && result.consumption && result.price) {
+      setStatus('Loading previously uploaded files...', 'processing');
+      console.log('Found saved files:', result);
+      
+      // Load consumption file
+      const consumptionResponse = await fetch('/api/download/consumption');
+      const consumptionBlob = await consumptionResponse.blob();
+      const consumptionFile = new File([consumptionBlob], result.consumption.filename, {
+        type: consumptionBlob.type
+      });
+      
+      // Load price file
+      const priceResponse = await fetch('/api/download/price');
+      const priceBlob = await priceResponse.blob();
+      const priceFile = new File([priceBlob], result.price.filename, {
+        type: priceBlob.type
+      });
+      
+      // Process the files
+      handleConsumptionFile(consumptionFile);
+      handlePriceFile(priceFile);
+      
+      setStatus(`✅ Loaded saved files: ${result.consumption.filename} and ${result.price.filename}`, 'success');
+      console.log('Successfully loaded saved files from server');
+    } else {
+      console.log('No saved files found on server');
+    }
+  } catch (error) {
+    console.log('No saved files found or error loading:', error.message);
+    // This is fine - just means no files saved yet or server not available
+  }
+}
+
+/**
+ * Save a file to the server
+ */
+async function saveFileToServer(file, type) {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const response = await fetch(`/api/upload/${type}`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to save file to server');
+    }
+    
+    const result = await response.json();
+    console.log(`${type} file saved to server:`, result);
+    return true;
+  } catch (error) {
+    console.error(`Error saving ${type} file to server:`, error);
+    return false;
+  }
+}
+
+/**
+ * Clear all saved files from server
+ */
+async function clearSavedFiles() {
+  if (!confirm('Are you sure you want to delete the saved files from the server?')) {
+    return;
+  }
+  
+  try {
+    setStatus('Clearing saved files...', 'processing');
+    const response = await fetch('/api/clear', {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      setStatus('✅ Saved files cleared from server', 'success');
+      
+      // Clear local state
+      state.consumptionData = [];
+      state.priceData = [];
+      state.mergedData = [];
+      state.startDate = null;
+      state.endDate = null;
+      state.minDate = null;
+      state.maxDate = null;
+      
+      // Clear file inputs
+      document.getElementById('consumptionFile').value = '';
+      document.getElementById('priceFile').value = '';
+      
+      // Clear filename displays
+      document.getElementById('consumptionFilename').textContent = 'No file selected';
+      document.getElementById('priceFilename').textContent = 'No file selected';
+      
+      // Clear date inputs
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      
+      // Clear charts
+      if (state.charts.consumption) {
+        state.charts.consumption.destroy();
+        state.charts.consumption = null;
+      }
+      if (state.charts.monthlyCost) {
+        state.charts.monthlyCost.destroy();
+        state.charts.monthlyCost = null;
+      }
+      
+      // Clear statistics
+      document.getElementById('statTotalConsumption').textContent = '-';
+      document.getElementById('statTotalCost').textContent = '-';
+      document.getElementById('statAvgMonthlyConsumption').textContent = '-';
+      document.getElementById('statAvgMonthlyCost').textContent = '-';
+      document.getElementById('statAvgPrice').textContent = '-';
+      
+      console.log('All data cleared from client and server');
+    } else {
+      setStatus('❌ Error clearing files: ' + result.error, 'error');
+    }
+  } catch (error) {
+    console.error('Error clearing files:', error);
+    setStatus('⚠️ Could not clear files from server (server may not be available)', 'warning');
+  }
+}
+
 // File Upload Handlers
 function handleConsumptionFile(file) {
   const reader = new FileReader();
   const filename = file.name;
   const extension = filename.split('.').pop().toLowerCase();
   
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       let data;
       
@@ -838,6 +975,15 @@ function handleConsumptionFile(file) {
       state.consumptionData = processConsumptionData(processedData);
       document.getElementById('consumptionFilename').textContent = filename;
       
+      // Save to server (non-blocking)
+      saveFileToServer(file, 'consumption').then(saved => {
+        if (saved) {
+          console.log('Consumption file saved to server');
+        } else {
+          console.warn('Could not save consumption file to server, but processing locally');
+        }
+      });
+      
       // Try to merge if both files are loaded
       tryMergeAndUpdate();
     } catch (error) {
@@ -856,7 +1002,7 @@ function handlePriceFile(file) {
   const reader = new FileReader();
   const filename = file.name;
   
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const text = e.target.result;
       const parsed = Papa.parse(text, {
@@ -874,6 +1020,15 @@ function handlePriceFile(file) {
       
       state.priceData = processPriceData(processedData);
       document.getElementById('priceFilename').textContent = filename;
+      
+      // Save to server (non-blocking)
+      saveFileToServer(file, 'price').then(saved => {
+        if (saved) {
+          console.log('Price file saved to server');
+        } else {
+          console.warn('Could not save price file to server, but processing locally');
+        }
+      });
       
       // Try to merge if both files are loaded
       tryMergeAndUpdate();
@@ -989,6 +1144,9 @@ function loadSampleData() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+  // Try to load saved files from server
+  loadSavedFiles();
+  
   // File upload listeners
   document.getElementById('consumptionFile').addEventListener('change', function(e) {
     if (e.target.files.length > 0) {
@@ -1004,6 +1162,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Sample data button
   document.getElementById('loadSampleBtn').addEventListener('click', loadSampleData);
+  
+  // Clear saved files button
+  document.getElementById('clearSavedBtn').addEventListener('click', clearSavedFiles);
   
   // Date change listeners
   document.getElementById('startDate').addEventListener('change', function(e) {
