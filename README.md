@@ -208,18 +208,5 @@ Built with ❤️ for open data and renewable energy users.
 
 ***
 
-## 📜 License
-
-This project is licensed under the **MIT License**.
-
-You are free to:
-- Use
-- Modify
-- Distribute
-- Self-host
-as long as the original license and attribution are preserved.
-
-***
-
 Would you like me to include images or badges (e.g. npm version, screenshots of UI, “Built with Node.js” badge) for the GitHub version?
 Those can make the README visually engaging for potential users.
