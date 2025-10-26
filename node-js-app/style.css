@@ -1365,7 +1365,7 @@ body {
 
 .stats-grid-compact {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -1378,6 +1378,7 @@ body {
   align-items: center;
   gap: 12px;
   transition: all 0.25s ease;
+  min-width: 0;
 }
 
 .stat-card:hover {
@@ -1397,21 +1398,23 @@ body {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: clamp(10px, 1.8vw, 11px);
   font-weight: 600;
   color: var(--color-text-light);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 4px;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: clamp(16px, 2.5vw, 18px);
   font-weight: 700;
   color: var(--color-text-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 
@@ -1443,7 +1446,7 @@ body {
   }
 
   .stats-grid-compact {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .chart-container {
@@ -1463,5 +1466,20 @@ body {
 
   .section-card {
     padding: 16px;
+  }
+}
+
+/* Mobile phones - stack statistics vertically */
+@media (max-width: 480px) {
+  .stats-grid-compact {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 14px;
+  }
+  
+  .stat-icon {
+    font-size: 24px;
   }
 }
