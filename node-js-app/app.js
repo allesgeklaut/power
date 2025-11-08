@@ -761,10 +761,18 @@ function createMonthlyCostChart(data) {
           yAxisID: 'y',
         },
         {
-          label: 'Variable Fee',
+          label: 'Variable Fee Ökostrom',
           data: variableFees,
           backgroundColor: palette[1], // '#FFC185'
           borderColor: palette[1],
+          borderWidth: 1,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Fixed Fee Ökostrom',
+          data: fixedFees,
+          backgroundColor: palette[4], // '#5D878F'
+          borderColor: palette[4],
           borderWidth: 1,
           yAxisID: 'y',
         },
@@ -781,14 +789,6 @@ function createMonthlyCostChart(data) {
           data: gridBaseFees,
           backgroundColor: palette[3], // '#ECEBD5'
           borderColor: palette[3],
-          borderWidth: 1,
-          yAxisID: 'y',
-        },
-        {
-          label: 'Fixed Fee (App)',
-          data: fixedFees,
-          backgroundColor: palette[4], // '#5D878F'
-          borderColor: palette[4],
           borderWidth: 1,
           yAxisID: 'y',
         },
