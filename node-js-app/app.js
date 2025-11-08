@@ -447,14 +447,19 @@ function groupByTime(data) {
   const grouped = {};
 
   data.forEach(row => {
-    if (!grouped[row.timeStr]) {
-      grouped[row.timeStr] = {
+    // Extract UTC hour:minute (e.g., "08:30") to handle DST correctly
+    const utcHour = String(row.date.getUTCHours()).padStart(2, '0');
+    const utcMinute = String(row.date.getUTCMinutes()).padStart(2, '0');
+    const timeKey = `${utcHour}:${utcMinute}`;
+
+    if (!grouped[timeKey]) {
+      grouped[timeKey] = {
         consumption: 0,
         count: 0
       };
     }
-    grouped[row.timeStr].consumption += row.consumption;
-    grouped[row.timeStr].count++;
+    grouped[timeKey].consumption += row.consumption;
+    grouped[timeKey].count++;
   });
 
   // Calculate averages
@@ -598,7 +603,9 @@ function createConsumptionChart(filteredData, allData) {
     state.charts.consumption.destroy();
   }
 
-  // Group data by time
+  console.log('=== CONSUMPTION PROFILE: UTC-BASED AGGREGATION ===');
+
+  // Group data by UTC time (handles DST correctly)
   const selectedGrouped = groupByTime(filteredData);
   const overallGrouped = groupByTime(allData);
 
@@ -655,28 +662,28 @@ function createConsumptionChart(filteredData, allData) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
+        title: {
+          display: true,
+          text: 'Consumption Profile: Selected Period vs Overall (UTC Time)',
+          font: { size: 14, weight: 'bold' }
+        },
         legend: {
           display: true,
-          position: 'top',
-          onClick: function(evt, legendItem, legend) {
-            // by default
-            Chart.defaults.plugins.legend.onClick.call(this, evt, legendItem, legend);
-          },
-          labels: {
-            // Add info icon for Netzentgelte
-            generateLabels: function(chart) {
-              let labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-              const idxWork = labels.findIndex(l => l.text === 'Netzentgelt (Arbeit)');
-              const idxBase = labels.findIndex(l => l.text === 'Netzentgelt (fix)');
-              if(idxWork > -1) labels[idxWork].text += ' ℹ️';
-              if(idxBase > -1) labels[idxBase].text += ' ℹ️';
-              return labels;
-            }
-          }
+          position: 'top'
         },
         tooltip: {
           mode: 'index',
-          intersect: false
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              if (context.dataset.label === 'Selected Period') {
+                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} kWh`;
+              } else if (context.dataset.label === 'Overall Pattern (normalized)') {
+                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} kWh (normalized)`;
+              }
+              return context.parsed.y.toFixed(2);
+            }
+          }
         }
       },
       scales: {
@@ -813,9 +820,19 @@ function createMonthlyCostChart(data) {
             label: function(context) {
               // Custom tooltip for each segment
               const label = context.dataset.label || '';
-              if (label === 'Netzentgelt (Arbeit)') return `${label}: €${context.parsed.y.toFixed(2)} (Netzarbeitspreis)`;
-              if (label === 'Netzentgelt (fix)') return `${label}: €${context.parsed.y.toFixed(2)} (Grundpauschale)`;
-              return `${label}: €${context.parsed.y.toFixed(2)}`;
+              const value = context.parsed.y;
+
+              // Consumption line uses kWh (FIX: was showing € instead of kWh)
+              if (label.includes('Consumption') || label.includes('Monthly Consumption')) {
+                return `${label}: ${value.toFixed(1)} kWh`;
+              }
+
+              // Cost components use EUR
+              if (label === 'Netzentgelt (Arbeit)') return `${label}: €${value.toFixed(2)} (Netzarbeitspreis)`;
+              if (label === 'Netzentgelt (fix)') return `${label}: €${value.toFixed(2)} (Grundpauschale)`;
+
+              // Default: EUR for cost components
+              return `${label}: €${value.toFixed(2)}`;
             },
             footer: function(tooltipItems) {
               const index = tooltipItems[0].dataIndex;
