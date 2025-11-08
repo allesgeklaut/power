@@ -14,9 +14,41 @@
             <div class="header-links">
                 <a href="https://mein.oekostrom.at/a-p/" target="_blank" class="header-badge">📊 Consumption Data</a>
                 <a href="https://markt.apg.at/transparenz/uebertragung/day-ahead-preise/" target="_blank" class="header-badge">💰 Price Data</a>
+                <button id="open-grid-config" class="header-badge" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer;">⚙️ Netzentgelte</button>
             </div>
         </div>
     </header>
+
+    <!-- Netzentgelte Configuration Modal -->
+    <div id="grid-config-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Netzentgelte Konfiguration (Steiermark)</h2>
+                <button id="close-grid-config" class="btn-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box">
+                    <span class="info-icon">ℹ️</span>
+                    <div class="info-text">
+                        <strong>Standardwerte:</strong> Daten laut E-Control, Steiermark 2025. Werte sind anpassbar.
+                        <a href="https://www.e-netze.at/downloads-data/pdf.aspx?pdf=EN_Preisblatt_Strom_2025_per_01-2025_20250120_A4.pdf" target="_blank" class="info-link">📄 Quelle anzeigen</a>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="grid-base-fee" class="form-label">Grundpauschale (€/Monat)</label>
+                    <input type="number" id="grid-base-fee" class="form-control" min="0" step="0.01" value="6.24">
+                </div>
+                <div class="form-group">
+                    <label for="grid-work-fee" class="form-label">Netzarbeitspreis (€/kWh)</label>
+                    <input type="number" id="grid-work-fee" class="form-control" min="0" step="0.0001" value="0.0911">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="reset-grid-fees" class="btn btn-secondary">🔄 Zurücksetzen auf Standardwerte</button>
+                <button id="save-grid-fees" class="btn btn-primary">💾 Speichern</button>
+            </div>
+        </div>
+    </div>
 
     <!-- File Upload Section -->
     <section class="upload-section">
@@ -54,10 +86,10 @@
         <div class="downloads-monitor-section" style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #ffc107;">
             <h3 style="margin-top: 0; font-size: 16px; color: #856404;">⚡ Quick Upload (Chrome/Edge Only)</h3>
             <p style="margin: 10px 0; font-size: 14px; color: #856404;">
-                Grant access to your Downloads folder to automatically detect and load newly downloaded files.
+                Grant read access to a folder to automatically detect and load newly downloaded files. Files will remain in the selected folder after upload.
             </p>
             <button id="enable-downloads-monitor" class="btn btn-warning" style="background-color: #ffc107; color: #000;">
-                📁 Enable Downloads Folder Monitoring
+                📁 Enable Auto-Upload
             </button>
             <div id="downloads-monitor-status" style="margin-top: 10px; font-size: 13px; color: #856404; display: none;"></div>
         </div>
