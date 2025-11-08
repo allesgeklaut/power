@@ -577,20 +577,20 @@ function calculateStatistics(data) {
   // Add fixed fees and grid base fees for each month
   const totalFixedFees = months * FIXED_FEE;
   const totalGridBaseFees = months * gridConfig.baseFee;
+
+  // Total cost includes all components
   const totalCost = totalMarketCost + totalVariableFee + totalFixedFees + totalGridBaseFees + totalGridWorkCost;
+  const avgPrice = totalConsumption > 0 ? (totalMarketCost / totalConsumption) * 100 : 0; // cents per kWh, market price only
 
   const avgMonthlyConsumption = totalConsumption / months;
   const avgMonthlyCost = totalCost / months;
-
-  // Avoid division by zero
-  const avgPrice = totalConsumption > 0 ? (totalCost / totalConsumption) * 100 : 0; // cents per kWh
 
   return {
     totalConsumption: totalConsumption.toFixed(2),
     totalCost: totalCost.toFixed(2),
     avgMonthlyConsumption: avgMonthlyConsumption.toFixed(2),
     avgMonthlyCost: avgMonthlyCost.toFixed(2),
-    avgPrice: avgPrice.toFixed(3)
+    avgPrice: avgPrice.toFixed(3) // Market price only, in cents/kWh
   };
 }
 
@@ -744,7 +744,7 @@ function createMonthlyCostChart(data) {
 
   // Calculate average price per month for labels
   const avgPrices = monthlyData.map(m =>
-    (m.totalCost / m.consumption * 100).toFixed(2) // cents/kWh
+    (m.marketCost / m.consumption * 100).toFixed(2) // cents/kWh
   );
 
   state.charts.monthlyCost = new Chart(ctx, {
