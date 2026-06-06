@@ -1,0 +1,15 @@
+services:
+  power-monitor:
+    image: node:lts-alpine
+    container_name: power-monitor
+    working_dir: /app
+    volumes:
+      - /opt/stacks/power-monitor/node-js-app:/app
+      - /opt/stacks/power-monitor/node-js-app/uploads:/app/uploads
+    command: sh -c "npm install && node server.js"
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
